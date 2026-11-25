@@ -25,9 +25,12 @@ This document defines supported runtime setup, environment promotion stages, hea
 2. Copy `.env.example` to `.env` for local non-secret configuration (`OPRA_MAX_UPLOAD_BYTES`, `OPRA_MAX_ROWS`, `OPRA_MATURITY_BUFFER_DAYS`, `OPRA_MIN_SAMPLE_SIZE`); never commit `.env`.
 3. Synchronize locked dependencies:
 
-```bash
-uv sync --locked --extra dev
-Launch the Streamlit application entrypoint:
+   ```bash
+   uv sync --locked --extra dev
+   ```
 
-Bash
-uv run streamlit run src/opra/app/main.py
+4. Launch the Streamlit application entrypoint:
+
+   ```bash
+   uv run streamlit run src/opra/app/main.py
+   ```

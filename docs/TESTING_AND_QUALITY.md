@@ -32,9 +32,7 @@ Run all four quality gates locally and in GitHub Actions CI (`.github/workflows/
 
 ```bash
 uv run ruff check .
-Bash
 uv run ruff format --check .
-Bash
 uv run mypy src/opra
-Bash
 uv run pytest --cov=opra --cov-report=term-missing --cov-fail-under=80
+```

@@ -43,3 +43,4 @@ flowchart TD
     Runner -.->|"captures ConfigSnapshot & models"| Shared
     Services -.->|"consumes/produces immutable contracts"| Shared
     Services -.->|"reserved boundary only"| Storage
+```
