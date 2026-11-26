@@ -48,7 +48,7 @@ flowchart TD
 
 ### Module responsibilities
 
-Packages under `src/opra/` and their intended roles (from [docs/TECHNICAL_DESIGN.md](docs/TECHNICAL_DESIGN.md)). Apart from `app/main.py`, each package is currently an empty placeholder.
+Packages under `src/opra/` and their intended roles (from [docs/TECHNICAL_DESIGN.md](docs/TECHNICAL_DESIGN.md)). Apart from `app/main.py` and the Stage 2A configuration and exception modules in `core/`, the packages are currently placeholders.
 
 | Package | Intended responsibility |
 | :--- | :--- |
@@ -97,7 +97,7 @@ Streamlit may only be imported inside `src/opra/app/` (enforced by `tests/app/te
 │   ├── __init__.py              # Package version
 │   ├── app/                     # Streamlit presentation (main.py, pages/, components/)
 │   ├── analytics/
-│   ├── core/
+│   ├── core/                    # Configuration and domain exceptions
 │   ├── ingestion/
 │   ├── intelligence/
 │   ├── models/
@@ -112,7 +112,7 @@ Streamlit may only be imported inside `src/opra/app/` (enforced by `tests/app/te
     ├── app/                     # Architecture-boundary tests
     ├── integration/             # Placeholder (no tests yet)
     ├── sample_data/             # Placeholder (no datasets yet)
-    └── unit/                    # Placeholder (no tests yet)
+    └── unit/                    # Core configuration tests
 ```
 
 ## 7. Setup and Usage
@@ -137,7 +137,7 @@ The development tools (`pytest`, `pytest-cov`, `ruff`, `mypy`) are declared as t
 cp .env.example .env
 ```
 
-> The configuration loader (`src/opra/core/config.py`) is not implemented yet, so these variables are not read by the application at this time.
+> `src/opra/core/config.py` defines validated configuration objects but does not read environment variables or `.env`; these variables are not read by the application.
 
 ### Run the application
 
@@ -173,7 +173,8 @@ Full rules: [docs/SECURITY_AND_DATA_GOVERNANCE.md](docs/SECURITY_AND_DATA_GOVERN
 | Repository scaffold, package layout, tooling, and CI workflow | Present |
 | Streamlit shell (`src/opra/app/main.py`) | Foundation status page only |
 | Architecture-boundary tests (package importability, Streamlit isolation) | Present |
-| Core configuration (`OpraConfig`, `ConfigSnapshot`) and domain models | Not implemented — specified in [docs/tasks/OPRA-MODELS-001.md](docs/tasks/OPRA-MODELS-001.md), awaiting authorization |
+| Core configuration (`OpraConfig`, `ConfigSnapshot`) and `ConfigurationError` | Implemented (Stage 2A); no environment loading |
+| Domain models (`records`, `periods`, `analytics`, `intelligence`) | Not implemented — blocked on unresolved decisions in [docs/tasks/OPRA-MODELS-001.md](docs/tasks/OPRA-MODELS-001.md) |
 | Ingestion, validation, processing, analytics, intelligence, recommendations, reporting, pipeline | Not implemented |
 | Performance benchmark (`scripts/benchmark_pipeline.py`, 50,000 rows in under 5.0 s) | Planned; script does not exist yet |
 | Production readiness | Not claimed |
@@ -193,7 +194,7 @@ Open design decisions (CSV schema, KPI catalogue, confidence rules, rounding mod
 | [docs/TESTING_AND_QUALITY.md](docs/TESTING_AND_QUALITY.md) | Test strategy and mandatory quality gates |
 | [docs/SECURITY_AND_DATA_GOVERNANCE.md](docs/SECURITY_AND_DATA_GOVERNANCE.md) | Upload controls, privacy, session isolation, secrets |
 | [docs/DEPLOYMENT_AND_OPERATIONS.md](docs/DEPLOYMENT_AND_OPERATIONS.md) | Runtime setup, environment stages, release gates |
-| [docs/tasks/OPRA-MODELS-001.md](docs/tasks/OPRA-MODELS-001.md) | First implementation task specification (prepared, not authorized) |
+| [docs/tasks/OPRA-MODELS-001.md](docs/tasks/OPRA-MODELS-001.md) | Stage 2A configuration implementation and remaining model decisions |
 
 ## 11. License
 
