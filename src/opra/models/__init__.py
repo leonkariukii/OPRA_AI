@@ -1,4 +1,15 @@
-"""Immutable domain models shared across pipeline stages.
+"""Immutable domain models shared across pipeline stages."""
 
-Reserved boundary; domain models are delivered by a separately approved task.
-"""
+from opra.models.records import (
+    CanonicalStatus,
+    JobRecord,
+    JobStatus,
+    RawJobRecord,
+)
+
+__all__ = [
+    "CanonicalStatus",
+    "JobRecord",
+    "JobStatus",
+    "RawJobRecord",
+]
