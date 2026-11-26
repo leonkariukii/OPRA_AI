@@ -15,3 +15,7 @@ class ConfigurationError(OpraError):
     Configuration is validated fail-fast: invalid values are never clamped or replaced
     with defaults.
     """
+
+
+class ModelValidationError(OpraError):
+    """Raised when a domain model violates a construction invariant."""
