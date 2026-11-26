@@ -53,11 +53,6 @@ class IngestionResult:
         """Compatibility alias for quarantine_diagnostics."""
         return self.quarantine_diagnostics
 
-    @property
-    def exact_duplicate_count(self) -> int:
-        return len(self.exact_duplicates)
-
-
 class DatasetIngestionError(IngestionError):
     """Whole-dataset rejection with a controlled code only."""
 
@@ -102,13 +97,12 @@ def _diagnostic(
 def _timestamp(text: str) -> datetime:
     if not text or OFFSET_SUFFIX.search(text) is None:
         raise ValueError
-    try:
-        parsed = datetime.fromisoformat(text[:-1] + "+00:00" if text.upper().endswith("Z") else text)
-        if parsed.tzinfo is None or parsed.utcoffset() is None:
-            raise ValueError
-        return parsed.astimezone(UTC)
-    except (OverflowError, ValueError):
-        raise
+    parsed = datetime.fromisoformat(
+        text[:-1] + "+00:00" if text.upper().endswith("Z") else text
+    )
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError
+    return parsed.astimezone(UTC)
 
 
 def _decimal(text: str) -> Decimal:
@@ -250,7 +244,6 @@ def _parse_record(
 
 def _canonical_equality_key(record: JobRecord) -> object:
     """Compare parsed canonical values, preserving Decimal scale and UTC instant."""
-    amounts: tuple[tuple[object, ...] | None, ...] = ()
     return (
         record.job_id,
         record.status,
@@ -359,7 +352,7 @@ def ingest_csv(
                 )
             continue
 
-        first_row, first_record = sorted(entries, key=lambda item: item[0])[0]
+        first_row, first_record = min(entries, key=lambda item: item[0])
         retained.append((first_row, first_record))
         exact_duplicate_count += len(entries) - 1
 
