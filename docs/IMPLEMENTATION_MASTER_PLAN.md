@@ -12,9 +12,9 @@
 This master plan consolidates the remaining OPRA.AI MVP work into **four dependency-ordered implementation packages**, with Package 4 divided into **Package 4.1** (autonomous release readiness and deployment preparation) and **Package 4.2** (owner-authorized production deployment and acceptance). Rather than running one prompt per small milestone with repeated owner approval loops, the coding agent executes Packages 1 through 4.1 in one coordinated implementation cycle while respecting existing contracts, baseline diagnostics, and package-level quality gates.
 
 ### Authoritative Governance & Specifications
-Existing approved governance and technical documents remain authoritative. Before implementation, the coding agent must verify actual repository paths rather than assuming any referenced document exists. If a required approved specification is missing, the agent must report a structured blocker rather than creating a replacement or guessing its contents:
+Existing approved governance and technical documents remain authoritative for implementation decisions. The roadmap file is a navigation index derived from this master plan; it is not recovered historical roadmap content and is not an independent source of requirements. Before implementation, the coding agent must verify actual repository paths rather than assuming any referenced document exists. If a required approved specification is missing, the agent must report a structured blocker rather than creating a replacement or guessing its contents:
 1. `AGENTS.md` (Repository rules, coding standards, workflow boundaries)
-2. `docs/IMPLEMENTATION_ROADMAP.md` (Original roadmap and milestone sequence)
+2. `docs/IMPLEMENTATION_ROADMAP.md` (Derived navigation index only; use this master plan and approved specifications for requirements)
 3. `docs/specifications/OPRA-INGEST-001.md` v1.0.0 (CSV ingestion, validation, duplicate detection, and quarantine rules)
 4. `OPRA-MODELS-001.md` (verify exact path in `docs/` or `docs/specifications/`) and existing model modules/tests (Domain models, contracts, and public exports)
 5. Approved product, technical, analytics, reporting, and security specifications in `docs/`
