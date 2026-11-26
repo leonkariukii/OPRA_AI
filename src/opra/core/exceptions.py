@@ -18,4 +18,8 @@ class ConfigurationError(OpraError):
 
 
 class ModelValidationError(OpraError):
-    """Raised when a domain model violates a construction invariant."""
+    """Raised when a domain model receives an invalid argument or violates an invariant.
+
+    Used strictly for domain-model validation. It is distinct from
+    :class:`ConfigurationError`, which remains the error for invalid configuration values.
+    """
