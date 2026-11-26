@@ -195,6 +195,7 @@ Open design decisions (CSV schema, KPI catalogue, confidence rules, rounding mod
 | [docs/SECURITY_AND_DATA_GOVERNANCE.md](docs/SECURITY_AND_DATA_GOVERNANCE.md) | Upload controls, privacy, session isolation, secrets |
 | [docs/DEPLOYMENT_AND_OPERATIONS.md](docs/DEPLOYMENT_AND_OPERATIONS.md) | Runtime setup, environment stages, release gates |
 | [docs/tasks/OPRA-MODELS-001.md](docs/tasks/OPRA-MODELS-001.md) | Stage 2A configuration implementation and remaining model decisions |
+| [docs/specifications/OPRA-INGEST-001.md](docs/specifications/OPRA-INGEST-001.md) | Proposed data ingestion contract; awaiting owner approval before implementation |
 
 ## 11. License
 
