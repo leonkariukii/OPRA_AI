@@ -23,3 +23,7 @@ class ModelValidationError(OpraError):
     Used strictly for domain-model validation. It is distinct from
     :class:`ConfigurationError`, which remains the error for invalid configuration values.
     """
+
+
+class IngestionError(OpraError):
+    """Raised when ingestion fails at the dataset level."""
