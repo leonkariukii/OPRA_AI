@@ -1,7 +1,7 @@
 ﻿# OPRA.AI — Data Ingestion Contract
 
 **Document ID:** `OPRA-INGEST-001`  
-**Version:** `1.0.0`  
+**Version:** `1.1.0`  
 **Status:** Approved — implementation authorized for Stage 3B  
 **Last Updated:** 2026-11-27  
 **Related Documents:** [OPRA-MODELS-001](../tasks/OPRA-MODELS-001.md) | [Data and Analytics](../DATA_AND_ANALYTICS.md) | [Product Requirements](../PRODUCT_REQUIREMENTS.md) | [Technical Design](../TECHNICAL_DESIGN.md) | [Security and Data Governance](../SECURITY_AND_DATA_GOVERNANCE.md)
@@ -155,6 +155,37 @@ Approved deterministic workflow, in order:
 
 Dataset-level failures produce a failed ingestion outcome and no valid records. Record-level failures produce quarantined diagnostics; only records satisfying the approved contract proceed.
 
+### 10.1 Record outcome and duplicate counters
+
+The following counters describe one ingestion invocation. They are calculated anew for each invocation and are not persisted or accumulated across retries or repeated ingestion of the same payload.
+
+| Counter | Definition and increment condition |
+|---|---|
+| `total_processed_record_count` | Number of data records entering record-level validation in a successfully parsed dataset; the header is excluded. Each input record is counted once. The treatment of blank lines and malformed row shapes is subject to §10.2. |
+| `accepted_record_count` | Number of canonical records emitted in the valid-record result after field validation and duplicate resolution. Increment once for each emitted record. |
+| `rejected_record_count` | Number of processed records not emitted as accepted records. This includes quarantined records and subsequent exact-duplicate records excluded by deduplication. Increment once for each such input record. |
+| `exact_duplicate_count` | Number of subsequent valid records for a `job_id` whose parsed canonical field values equal the first valid occurrence, when the valid records for that ID have no conflicting canonical values. Increment once per subsequent equal record; retain only the first occurrence. |
+| `conflicting_duplicate_count` | Number of valid records belonging to a `job_id` group in which at least two parsed canonical records differ in one or more canonical fields. Increment once for every valid record in that conflicting group; quarantine all such records. |
+| `quarantined_record_count` | Number of processed records assigned to quarantine and excluded from accepted output. Increment once per quarantined input record, even if more than one diagnostic is associated with it. |
+
+Accepted and rejected are mutually exclusive primary outcomes and reconcile for a successfully parsed dataset:
+
+`accepted_record_count + rejected_record_count = total_processed_record_count`
+
+Duplicate counters are reason counters, not additional primary outcomes; do not add them again when reconciling the total. A quarantined record is included in `rejected_record_count`. `conflicting_duplicate_count` is a subset of quarantined and rejected records. `exact_duplicate_count` is a subset of rejected records and is not, by the exact-duplicate rule in §5, assigned to quarantine. A record in a conflicting `job_id` group is classified as conflicting, not exact; this applies to every valid record in the group, including its first input occurrence. Invalid records remain independently quarantined/rejected and do not participate in duplicate comparisons.
+
+Each counter counts input record occurrences within the current invocation, not distinct `job_id` values. Repeating ingestion starts a new count; a prior attempt’s counters have no effect. Dataset-level failure prevents record-level outcomes from being emitted; whether a failed invocation reports these counters as unavailable or as zero is unresolved in §10.2.
+
+### 10.2 Counter edge cases requiring explicit resolution
+
+The following cases are not defined sufficiently by the existing contract to choose record-counter behavior without an owner decision:
+
+* Whether blank CSV lines count as data records or are ignored.
+* Whether a CSV row with a field count different from the header is a dataset-level structural failure or a record-level rejected/quarantined record. This determines whether it contributes to `total_processed_record_count`.
+* Whether a dataset-level failure returns zero counters or no record-counter summary. No partial record outcomes are produced by this contract.
+
+Until these cases are decided, the reconciliation equation applies only to successfully parsed records that enter record-level validation. Implementations must not silently choose different counter semantics for these edge cases.
+
 ## 11. Extensibility
 
 Keep the core contract limited to stable shared concepts (identity, typed optional values, explicit timestamps, currency-tagged amounts, privacy-safe diagnostics). Source adapters may map vendor columns and declared semantics into the canonical contract before validation, but may not silently invent values or meanings. Automotive categories/statuses require explicit mapping. Non-automotive domains should add separately approved domain schemas/adapters and domain-specific validation; they must not change existing automotive field meanings or core identity/time/precision/privacy guarantees. Version schema changes and keep unknown source-specific fields out of core records unless approved.
@@ -191,3 +222,4 @@ The repository copy inspected for this specification does not contain the Stage 
 |---|---|---|
 | `0.1.0-draft` | 2026-11-27 | Initial proposed ingestion contract; separates established project constraints from owner decisions. |
 | `1.0.0` | 2026-11-27 | Incorporates the nine approved owner decisions and resolves Stage 3A audit blockers. Canonical schema, timestamps, duplicates, finances, invalid data, privacy, cohorts, and extensibility are now approved without rewriting prior history. |
+| `1.1.0` | 2026-11-27 | Adds owner-approved per-invocation accepted, rejected, duplicate-reason, and quarantine counter semantics with reconciliation and unresolved CSV edge cases. |
