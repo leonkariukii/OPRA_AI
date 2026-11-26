@@ -1,12 +1,12 @@
 # OPRA-MODELS-001 — Core Configuration and Immutable Domain Models
 
 **Task ID:** `OPRA-MODELS-001`  
-**Version:** `0.1.0-draft`  
-**Status:** Prepared — Awaiting Step 7 Verification and Explicit Human Authorization.  
-**Last Updated:** 2026-11-25  
+**Version:** `0.2.0-draft`
+**Status:** Partially Implemented (Stage 2A) — Configuration complete; domain models remain blocked on unresolved decisions.
+**Last Updated:** 2026-11-26
 **Related Documents:** [PROJECT_FOUNDATION.md](../PROJECT_FOUNDATION.md) | [PRODUCT_REQUIREMENTS.md](../PRODUCT_REQUIREMENTS.md) | [TECHNICAL_DESIGN.md](../TECHNICAL_DESIGN.md) | [DATA_AND_ANALYTICS.md](../DATA_AND_ANALYTICS.md) | [PYTHON_ENGINEERING_STANDARDS.md](../PYTHON_ENGINEERING_STANDARDS.md) | [TESTING_AND_QUALITY.md](../TESTING_AND_QUALITY.md) | [SECURITY_AND_DATA_GOVERNANCE.md](../SECURITY_AND_DATA_GOVERNANCE.md) | [AGENTS.md](../../AGENTS.md)
 
-> **This document is a task specification only.** It does not authorize implementation. Implementation may begin only after (1) Stage 1C is complete, (2) Step 7 baseline verification has passed, and (3) the human project owner has reviewed this specification and explicitly authorized the task.
+> **Stage 2A note.** The owner authorized configuration and exception implementation only. The domain models remain blocked on unresolved decisions. Step 7 criteria are not defined in the repository; this work does not claim that Step 7 passed.
 
 ## 1. Objective
 
@@ -20,7 +20,8 @@ No pipeline behavior is implemented by this task.
 
 | File | Contents |
 | :--- | :--- |
-| `src/opra/core/config.py` | `OpraConfig` and `ConfigSnapshot`, with configuration validation. |
+| `src/opra/core/config.py` | `OpraConfig` and `ConfigSnapshot`, with configuration validation. **Implemented.** |
+| `src/opra/core/exceptions.py` | `OpraError` and `ConfigurationError` (added to scope to resolve `D-07`). **Implemented.** |
 | `src/opra/models/records.py` | Record domain models. |
 | `src/opra/models/periods.py` | Reporting-period domain models. |
 | `src/opra/models/analytics.py` | Analytics result models. |
@@ -86,14 +87,14 @@ The approved documents mark these items as open. Per [AGENTS.md](../../AGENTS.md
 | `D-04` | Confidence tier definitions, sample-size thresholds beyond `min_sample_size`, and recommendation ranking/prioritization criteria. Blocks `intelligence.py`. | [DATA_AND_ANALYTICS.md](../DATA_AND_ANALYTICS.md) section 6 |
 | `D-05` | `Decimal` quantization/rounding modes per KPI. | [PYTHON_ENGINEERING_STANDARDS.md](../PYTHON_ENGINEERING_STANDARDS.md) section 7 |
 | `D-06` | **Representation of `N/A` (not applicable) versus `None` (unavailable) in typed models.** [DATA_AND_ANALYTICS.md](../DATA_AND_ANALYTICS.md) section 3 requires three distinct states, while [PRODUCT_REQUIREMENTS.md](../PRODUCT_REQUIREMENTS.md) (`FR-ANA-01`) describes missing metrics as `None` rendered as `N/A`. A typed mechanism that distinguishes "not applicable" from "unavailable" is not defined. | `DATA_AND_ANALYTICS.md` s.3 / `PRODUCT_REQUIREMENTS.md` `FR-ANA-01` |
-| `D-07` | **`ConfigurationError` location.** Standards place it in the `OpraError` hierarchy in `src/opra/core/exceptions.py`, but `exceptions.py` is not in this task's intended file list. Config validation cannot raise `ConfigurationError` unless the file is added to scope or the error is provided another way. | [PYTHON_ENGINEERING_STANDARDS.md](../PYTHON_ENGINEERING_STANDARDS.md) section 5 |
-| `D-08` | Relationship between `OpraConfig` and `ConfigSnapshot` (for example whether the snapshot is produced by a factory method or constructed directly), and whether `ConfigSnapshot` carries exactly the four settings above or more. | Not specified |
+| `D-07` | **Resolved for Stage 2A.** `src/opra/core/exceptions.py` was added to scope with `OpraError` and `ConfigurationError`. | [PYTHON_ENGINEERING_STANDARDS.md](../PYTHON_ENGINEERING_STANDARDS.md) section 5 |
+| `D-08` | **Resolved provisionally for Stage 2A.** `OpraConfig` has the approved defaults; `ConfigSnapshot` has the same four settings without defaults and validates direct construction; `OpraConfig.snapshot()` creates the snapshot. | Technical design and section 3.1 |
 | `D-09` | Whether environment-variable loading (`OPRA_MAX_UPLOAD_BYTES`, `OPRA_MAX_ROWS`, `OPRA_MATURITY_BUFFER_DAYS`, `OPRA_MIN_SAMPLE_SIZE`) is part of this task. Also, `.env.example` contains `OPRA_ENVIRONMENT` and `OPRA_LOG_LEVEL`, which [SECURITY_AND_DATA_GOVERNANCE.md](../SECURITY_AND_DATA_GOVERNANCE.md) section 2 does not list among its approved keys and no document defines. | `.env.example`; `SECURITY_AND_DATA_GOVERNANCE.md` s.2 |
 | `D-10` | Location and shape of the final report contract (`generated_at_utc`, `engine_version`, `ConfigSnapshot`, results). The runner is said to assemble it, but no `models/` file is listed for it. | [TECHNICAL_DESIGN.md](../TECHNICAL_DESIGN.md) section 2; `FR-RPT-01` |
-| `D-11` | Construction-time strictness not specified by the documents: whether `bool` is rejected for integer settings, whether `float` is rejected where `Decimal` is required, handling of `Decimal` `NaN`/infinity, and whether non-UTC aware datetimes are rejected or converted to UTC. | Not specified |
+| `D-11` | **Resolved for configuration settings only.** Booleans and non-integers are rejected with `ConfigurationError`; invalid values are not coerced. Numeric and datetime strictness for domain models remains open. | Stage 2A configuration contract |
 | `D-12` | **"Step 7" is referenced as the verification gate** ([AGENTS.md](../../AGENTS.md), [PROJECT_FOUNDATION.md](../PROJECT_FOUNDATION.md)) **but is not defined in any repository document**, so its pass criteria cannot be checked from the repository alone. | `AGENTS.md` s.4; `PROJECT_FOUNDATION.md` s.5 |
 
-Items `D-01`–`D-04` mean that, until resolved, only the configuration portion (section 3.1) can be implemented with full fidelity to the documents; even that depends on `D-07` and `D-08`.
+Items `D-01`–`D-04` mean the corresponding domain models remain blocked. Configuration in section 3.1 has been implemented; `D-07` and `D-08` were resolved for that scope.
 
 ## 5. Test Plan
 
@@ -162,13 +163,24 @@ The task is complete only when **all** of the following hold:
 
 | Prerequisite | State |
 | :--- | :--- |
-| Stage 1C complete | Pending owner review |
-| Step 7 baseline verification passed | Pending (criteria not defined in repository; see `D-12`) |
-| Open decisions in section 4 resolved or explicitly deferred by the owner | Pending |
-| Explicit human authorization to implement | **Not granted** |
+| Stage 1C complete | Complete |
+| Step 7 baseline verification passed | Not verified; criteria are undefined in the repository (`D-12`) |
+| Open decisions in section 4 resolved or explicitly deferred by the owner | Partially; see the Stage 2A implementation record |
+| Explicit human authorization to implement | Granted for Stage 2A configuration and exceptions only; remaining model files need decisions `D-01`–`D-06` |
 
-## 8. Revision History
+## 8. Implementation Record (Stage 2A)
+
+Implemented in the canonical project tree:
+
+* `src/opra/core/config.py`: validated `OpraConfig` defaults and immutable `ConfigSnapshot`.
+* `src/opra/core/exceptions.py`: `OpraError` and `ConfigurationError`.
+* `tests/unit/test_config.py`: configuration defaults, boundaries, type rejection, immutability, and snapshot behavior.
+
+Environment-variable loading and domain models are not implemented. The unresolved schema, KPI, and intelligence decisions continue to block the model files.
+
+## 9. Revision History
 
 | Version | Date | Summary |
 | :--- | :--- | :--- |
 | `0.1.0-draft` | 2026-11-25 | Initial task specification prepared during Stage 1C. Not authorized for implementation. |
+| `0.2.0-draft` | 2026-11-26 | Stage 2A configuration and exceptions integrated; remaining model decisions and Step 7 criteria remain open. |
