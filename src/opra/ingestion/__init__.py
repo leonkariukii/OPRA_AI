@@ -1,4 +1,17 @@
-"""Ingestion stage boundary (UTF-8 CSV input within configured limits).
+"""In-memory source ingestion."""
 
-Reserved boundary; no behavior is implemented at the scaffold stage.
-"""
+from opra.ingestion.csv_loader import (
+    DatasetIngestionError,
+    IngestionErrorCode,
+    IngestionResult,
+    QuarantineDiagnostic,
+    ingest_csv,
+)
+
+__all__ = [
+    "DatasetIngestionError",
+    "IngestionErrorCode",
+    "IngestionResult",
+    "QuarantineDiagnostic",
+    "ingest_csv",
+]
