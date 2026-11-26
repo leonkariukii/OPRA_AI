@@ -1,4 +1,4 @@
 """Shared configuration, exceptions and PII-safe logging contracts.
 
-Reserved boundary; no behavior is implemented at the scaffold stage.
+Implemented: configuration and exceptions. Logging is not implemented yet.
 """
