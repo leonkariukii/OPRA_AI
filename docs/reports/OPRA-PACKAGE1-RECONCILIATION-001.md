@@ -63,12 +63,12 @@ The first focused test attempt exposed test-only issues (unfiltered unrelated li
 
 ## 6. Outstanding gaps and limitations
 
-No Stage 4A or Stage 4B implementation defects remain against the reviewed approved specifications. The roadmap remains a derived execution index; the specifications continue to govern business behavior. Package 1 has not been committed, and human owner acceptance is pending.
+No Stage 4A or Stage 4B implementation defects remain against the reviewed approved specifications. The roadmap remains a derived execution index; the specifications continue to govern business behavior. Human owner acceptance is pending.
 
 ## 7. Final status and handover
 
 **PACKAGE 1 RECONCILIATION COMPLETE — ACCEPTANCE REVIEW REQUIRED**
 
-Stages 4A and 4B meet the acceptance criteria recorded here, subject to owner review. No Git commit or push was performed. No Package 2, Package 3, or deployment work was started.
+Stages 4A and 4B meet the acceptance criteria recorded here, subject to owner review. At the owner acceptance audit snapshot, branch `main` and `origin/main` both pointed to `75a58b02a71dc9b054cae1afc8717b5046888b2a`; the working tree and index were clean. Four commits separate that audited HEAD from the previous reported commit `a7c797cffc0f6e8a5b9156120f886a3a3da2a61d`. Git records author and committer identities, timestamps, commit messages, and parent relationships, but does not independently establish which person or process created those commits or updated the remote-tracking reference. The earlier statements that Package 1 had not been committed and that no commit or push had occurred may describe an earlier repository snapshot; they are not accurate descriptions of this audited state. No Package 2, Package 3, or deployment work was started.
 
 **Next task after owner acceptance:** Package 2 — Intelligence & Reporting (Stages 5A, 5B, and 6A), as listed in the implementation roadmap. It depends on accepted Package 1 contracts. Its entry criteria include the approved `OPRA-INTELLIGENCE-001` finding/evidence/recommendation rules and `OPRA-REPORT-001` reporting contracts; acceptance requires deterministic tests for triggers, evidence and ordering, recommendations, serialization, privacy/escaping, and the project quality gates.
