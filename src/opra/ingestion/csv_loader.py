@@ -42,6 +42,11 @@ class IngestionResult:
     valid_records: tuple[JobRecord, ...]
     quarantine_diagnostics: tuple[QuarantineDiagnostic, ...]
     exact_duplicates: int = 0
+    total_processed_record_count: int = 0
+    accepted_record_count: int = 0
+    rejected_record_count: int = 0
+    conflicting_duplicate_count: int = 0
+    quarantined_record_count: int = 0
 
     @property
     def records(self) -> tuple[JobRecord, ...]:
@@ -53,11 +58,22 @@ class IngestionResult:
         """Compatibility alias for quarantine_diagnostics."""
         return self.quarantine_diagnostics
 
-class DatasetIngestionError(IngestionError):
-    """Whole-dataset rejection with a controlled code only."""
+    @property
+    def exact_duplicate_count(self) -> int:
+        """Count of valid exact-duplicate rows excluded from accepted output."""
+        return self.exact_duplicates
 
-    def __init__(self, code: IngestionErrorCode) -> None:
+
+class DatasetIngestionError(IngestionError):
+    """Whole-dataset rejection with an optional partial record-outcome summary."""
+
+    def __init__(
+        self,
+        code: IngestionErrorCode,
+        partial_result: IngestionResult | None = None,
+    ) -> None:
         self.code = code
+        self.partial_result = partial_result
         super().__init__(code.value)
 
 
@@ -80,9 +96,7 @@ STATUS_MAP: Final[dict[str, JobStatus]] = {
 DECIMAL_TEXT: Final[re.Pattern[str]] = re.compile(
     r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\Z"
 )
-OFFSET_SUFFIX: Final[re.Pattern[str]] = re.compile(
-    r"(?:Z|[+-]\d{2}:\d{2})\Z", re.IGNORECASE
-)
+OFFSET_SUFFIX: Final[re.Pattern[str]] = re.compile(r"(?:Z|[+-]\d{2}:\d{2})\Z", re.IGNORECASE)
 
 
 def _diagnostic(
@@ -97,9 +111,7 @@ def _diagnostic(
 def _timestamp(text: str) -> datetime:
     if not text or OFFSET_SUFFIX.search(text) is None:
         raise ValueError
-    parsed = datetime.fromisoformat(
-        text[:-1] + "+00:00" if text.upper().endswith("Z") else text
-    )
+    parsed = datetime.fromisoformat(text[:-1] + "+00:00" if text.upper().endswith("Z") else text)
     if parsed.tzinfo is None or parsed.utcoffset() is None:
         raise ValueError
     return parsed.astimezone(UTC)
@@ -288,51 +300,69 @@ def ingest_csv(
     except (StopIteration, csv.Error):
         raise DatasetIngestionError(IngestionErrorCode.DATASET_STRUCTURE_INVALID) from None
 
-    if (
-        not headers
-        or any(header == "" for header in headers)
-        or len(set(headers)) != len(headers)
-    ):
+    if not headers or any(header == "" for header in headers) or len(set(headers)) != len(headers):
         raise DatasetIngestionError(IngestionErrorCode.DATASET_STRUCTURE_INVALID)
     if not set(REQUIRED_HEADERS).issubset(headers):
         raise DatasetIngestionError(IngestionErrorCode.DATASET_STRUCTURE_INVALID)
 
-    try:
-        rows = list(reader)
-    except csv.Error:
-        raise DatasetIngestionError(IngestionErrorCode.DATASET_STRUCTURE_INVALID) from None
-
-    if len(rows) > snapshot.max_rows:
-        raise DatasetIngestionError(IngestionErrorCode.DATASET_LIMIT_EXCEEDED)
-
     valid_entries: list[tuple[int, JobRecord]] = []
     diagnostics: list[QuarantineDiagnostic] = []
-
-    for row_number, values in enumerate(rows, start=2):
-        if len(values) != len(headers):
-            diagnostics.append(
-                _diagnostic(
-                    row_number,
-                    IngestionErrorCode.RECORD_FIELD_INVALID,
-                    None,
-                    "ROW_SHAPE_INVALID",
+    total_processed = 0
+    try:
+        for values in reader:
+            if not values:  # Blank CSV lines are outside record processing and all counters.
+                continue
+            if total_processed >= snapshot.max_rows:
+                partial = _build_result(total_processed, valid_entries, diagnostics)
+                raise DatasetIngestionError(
+                    IngestionErrorCode.DATASET_LIMIT_EXCEEDED,
+                    partial if total_processed else None,
                 )
-            )
-            continue
 
-        row = dict(zip(headers, values))
-        record, diagnostic = _parse_record(row, row_number)
-        if record is not None:
-            valid_entries.append((row_number, record))
-        elif diagnostic is not None:
-            diagnostics.append(diagnostic)
+            row_number = total_processed + 2
+            total_processed += 1
+            if len(values) != len(headers):
+                diagnostics.append(
+                    _diagnostic(
+                        row_number,
+                        IngestionErrorCode.RECORD_FIELD_INVALID,
+                        None,
+                        "ROW_SHAPE_INVALID",
+                    )
+                )
+                continue
 
+            row = dict(zip(headers, values))
+            record, diagnostic = _parse_record(row, row_number)
+            if record is not None:
+                valid_entries.append((row_number, record))
+            elif diagnostic is not None:
+                diagnostics.append(diagnostic)
+    except DatasetIngestionError:
+        raise
+    except csv.Error:
+        partial = _build_result(total_processed, valid_entries, diagnostics)
+        raise DatasetIngestionError(
+            IngestionErrorCode.DATASET_STRUCTURE_INVALID,
+            partial if total_processed else None,
+        ) from None
+
+    return _build_result(total_processed, valid_entries, diagnostics)
+
+
+def _build_result(
+    total_processed: int,
+    valid_entries: list[tuple[int, JobRecord]],
+    diagnostics: list[QuarantineDiagnostic],
+) -> IngestionResult:
+    """Resolve duplicate groups and reconcile counters for processed rows."""
     entries_by_job_id: dict[str, list[tuple[int, JobRecord]]] = {}
     for entry in valid_entries:
         entries_by_job_id.setdefault(entry[1].job_id, []).append(entry)
 
     retained: list[tuple[int, JobRecord]] = []
     exact_duplicate_count = 0
+    conflicting_duplicate_count = 0
 
     for entries in entries_by_job_id.values():
         key_to_entries: dict[object, list[tuple[int, JobRecord]]] = {}
@@ -341,6 +371,7 @@ def ingest_csv(
             key_to_entries.setdefault(key, []).append(entry)
 
         if len(key_to_entries) > 1:
+            conflicting_duplicate_count += len(entries)
             for row_number, _record in entries:
                 diagnostics.append(
                     _diagnostic(
@@ -366,8 +397,19 @@ def ingest_csv(
         )
     )
 
+    accepted_count = len(retained)
+    quarantined_rows = {
+        diagnostic.source_row_number
+        for diagnostic in diagnostics
+        if diagnostic.source_row_number is not None
+    }
     return IngestionResult(
         valid_records=tuple(record for _row_number, record in retained),
         quarantine_diagnostics=tuple(diagnostics),
         exact_duplicates=exact_duplicate_count,
+        total_processed_record_count=total_processed,
+        accepted_record_count=accepted_count,
+        rejected_record_count=total_processed - accepted_count,
+        conflicting_duplicate_count=conflicting_duplicate_count,
+        quarantined_record_count=len(quarantined_rows),
     )

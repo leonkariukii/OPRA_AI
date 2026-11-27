@@ -1,7 +1,7 @@
-﻿# OPRA.AI — Data Ingestion Contract
+# OPRA.AI — Data Ingestion Contract
 
 **Document ID:** `OPRA-INGEST-001`  
-**Version:** `1.1.0`  
+**Version:** `1.2.0`
 **Status:** Approved — implementation authorized for Stage 3B  
 **Last Updated:** 2026-11-27  
 **Related Documents:** [OPRA-MODELS-001](../tasks/OPRA-MODELS-001.md) | [Data and Analytics](../DATA_AND_ANALYTICS.md) | [Product Requirements](../PRODUCT_REQUIREMENTS.md) | [Technical Design](../TECHNICAL_DESIGN.md) | [Security and Data Governance](../SECURITY_AND_DATA_GOVERNANCE.md)
@@ -116,7 +116,8 @@ No tax, gross/net, payment, refund, or accounting semantics are assumed.
 
 | Condition | Proposed handling |
 |---|---|
-| Malformed payload, invalid UTF-8, oversized upload/row count, missing or duplicate header structure | Reject the whole dataset deterministically; no partial parse result |
+| Malformed CSV payload, invalid UTF-8, oversized upload/row count, missing or duplicate header structure | Reject the whole dataset deterministically |
+| Malformed data row shape (field count differs from the header) | Count as a processed and rejected record; quarantine under the privacy-safe diagnostic requirements. Do not compare it for duplicates. |
 | Missing/invalid required `job_id`, `status`, or `opened_at` | Quarantine the affected record |
 | Invalid optional `completed_at` or financial field | Quarantine the affected record |
 | Missing optional field | Preserve as `None` |
@@ -142,18 +143,20 @@ Quarantine diagnostics must be privacy-safe (`P-04`): no raw source values, comp
 
 Parser exception text is never copied into a diagnostic. Row numbering, aggregation, and diagnostic limits are implementation details, but the public diagnostic contract remains limited to the controlled fields and codes above.
 
+A malformed data row shape is a record-level invalidity: its row may be identified only through the approved safe diagnostic fields and must not expose row contents.
+
 ## 10. Validation workflow
 
 Approved deterministic workflow, in order:
 
 1. Check upload byte limit; decode strict UTF-8; reject malformed payload.
-2. Parse CSV structure without evaluating formulas; validate header shape and row limit.
-3. Map approved canonical fields and validate field types/requiredness; collect safe diagnostics.
+2. Parse CSV structure without evaluating formulas; validate header shape and row limit. Exclude blank lines from record processing and every record counter.
+3. Count each nonblank data row entering record-level validation. A malformed row shape is rejected and quarantined as applicable, and excluded from duplicate comparison. Map approved canonical fields and validate field types/requiredness; collect safe diagnostics.
 4. Normalize aware timestamps to UTC and preserve Decimal values without rounding.
 5. Validate `job_id`; group records by identifier and distinguish exact duplicates from conflicts.
 6. Emit immutable valid-record tuple and immutable quarantine-diagnostic tuple; exclude all conflicting-ID records.
 
-Dataset-level failures produce a failed ingestion outcome and no valid records. Record-level failures produce quarantined diagnostics; only records satisfying the approved contract proceed.
+Dataset-level failure status is reported separately from record outcome counters. If a dataset-level failure occurs before record processing begins, return no record-counter summary. If it occurs after record processing begins, preserve the counters accumulated for that invocation. Record-level failures produce quarantined diagnostics; only records satisfying the approved contract proceed.
 
 ### 10.1 Record outcome and duplicate counters
 
@@ -161,12 +164,12 @@ The following counters describe one ingestion invocation. They are calculated an
 
 | Counter | Definition and increment condition |
 |---|---|
-| `total_processed_record_count` | Number of data records entering record-level validation in a successfully parsed dataset; the header is excluded. Each input record is counted once. The treatment of blank lines and malformed row shapes is subject to §10.2. |
+| `total_processed_record_count` | Number of nonblank data records entering record-level validation; the header and blank lines are excluded. Each input record is counted once. Malformed row shapes count as processed records. |
 | `accepted_record_count` | Number of canonical records emitted in the valid-record result after field validation and duplicate resolution. Increment once for each emitted record. |
-| `rejected_record_count` | Number of processed records not emitted as accepted records. This includes quarantined records and subsequent exact-duplicate records excluded by deduplication. Increment once for each such input record. |
+| `rejected_record_count` | Number of processed records not emitted as accepted records. This includes quarantined records, malformed row shapes, and subsequent exact-duplicate records excluded by deduplication. Increment once for each such input record. |
 | `exact_duplicate_count` | Number of subsequent valid records for a `job_id` whose parsed canonical field values equal the first valid occurrence, when the valid records for that ID have no conflicting canonical values. Increment once per subsequent equal record; retain only the first occurrence. |
 | `conflicting_duplicate_count` | Number of valid records belonging to a `job_id` group in which at least two parsed canonical records differ in one or more canonical fields. Increment once for every valid record in that conflicting group; quarantine all such records. |
-| `quarantined_record_count` | Number of processed records assigned to quarantine and excluded from accepted output. Increment once per quarantined input record, even if more than one diagnostic is associated with it. |
+| `quarantined_record_count` | Number of processed records assigned to quarantine and excluded from accepted output, including malformed row shapes. Increment once per quarantined input record, even if more than one diagnostic is associated with it. |
 
 Accepted and rejected are mutually exclusive primary outcomes and reconcile for a successfully parsed dataset:
 
@@ -174,17 +177,17 @@ Accepted and rejected are mutually exclusive primary outcomes and reconcile for 
 
 Duplicate counters are reason counters, not additional primary outcomes; do not add them again when reconciling the total. A quarantined record is included in `rejected_record_count`. `conflicting_duplicate_count` is a subset of quarantined and rejected records. `exact_duplicate_count` is a subset of rejected records and is not, by the exact-duplicate rule in §5, assigned to quarantine. A record in a conflicting `job_id` group is classified as conflicting, not exact; this applies to every valid record in the group, including its first input occurrence. Invalid records remain independently quarantined/rejected and do not participate in duplicate comparisons.
 
-Each counter counts input record occurrences within the current invocation, not distinct `job_id` values. Repeating ingestion starts a new count; a prior attempt’s counters have no effect. Dataset-level failure prevents record-level outcomes from being emitted; whether a failed invocation reports these counters as unavailable or as zero is unresolved in §10.2.
+Each counter counts input record occurrences within the current invocation, not distinct `job_id` values. Blank lines are excluded from `total_processed_record_count` and all other record counters, and are not rejected. Repeating ingestion starts a new count; a prior attempt’s counters have no effect. For a dataset-level failure after processing has begun, counters describe only the rows processed up to that failure; rows not yet processed are not included. The failure status is reported separately. For all rows included in a record-counter summary, including a partial summary after a dataset-level failure, primary outcome reconciliation is `accepted_record_count + rejected_record_count = total_processed_record_count`.
 
-### 10.2 Counter edge cases requiring explicit resolution
+### 10.2 Counter edge cases and dataset-level failures
 
-The following cases are not defined sufficiently by the existing contract to choose record-counter behavior without an owner decision:
+The approved edge-case decisions are:
 
-* Whether blank CSV lines count as data records or are ignored.
-* Whether a CSV row with a field count different from the header is a dataset-level structural failure or a record-level rejected/quarantined record. This determines whether it contributes to `total_processed_record_count`.
-* Whether a dataset-level failure returns zero counters or no record-counter summary. No partial record outcomes are produced by this contract.
+* Blank lines are ignored for record processing and excluded from every record counter; they are not rejected.
+* A data row whose field count differs from the header is a processed, rejected record, is quarantined under §9, and is excluded from exact/conflicting duplicate classification.
+* A dataset-level failure before record processing begins returns no record-counter summary. A dataset-level failure after processing begins preserves accumulated record counters and reports failure status separately from those counters.
 
-Until these cases are decided, the reconciliation equation applies only to successfully parsed records that enter record-level validation. Implementations must not silently choose different counter semantics for these edge cases.
+The reconciliation equation applies to every record-counter summary, including a partial summary returned with a dataset-level failure after processing has begun. `total_processed_record_count` in such a summary counts only the rows that entered record-level processing before failure; it does not mean the total number of rows present in the full input payload.
 
 ## 11. Extensibility
 
@@ -223,3 +226,4 @@ The repository copy inspected for this specification does not contain the Stage 
 | `0.1.0-draft` | 2026-11-27 | Initial proposed ingestion contract; separates established project constraints from owner decisions. |
 | `1.0.0` | 2026-11-27 | Incorporates the nine approved owner decisions and resolves Stage 3A audit blockers. Canonical schema, timestamps, duplicates, finances, invalid data, privacy, cohorts, and extensibility are now approved without rewriting prior history. |
 | `1.1.0` | 2026-11-27 | Adds owner-approved per-invocation accepted, rejected, duplicate-reason, and quarantine counter semantics with reconciliation and unresolved CSV edge cases. |
+| `1.2.0` | 2026-11-27 | Incorporates approved blank-line, malformed-row-shape, and dataset-level failure counter decisions. |

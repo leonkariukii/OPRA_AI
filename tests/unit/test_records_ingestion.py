@@ -15,7 +15,6 @@ from opra.ingestion.csv_loader import (
 )
 from opra.models.records import JobRecord, JobStatus
 
-
 CONFIG = ConfigSnapshot(
     max_upload_bytes=1_000_000,
     max_rows=100,
@@ -88,11 +87,11 @@ def test_job_record_accepts_iso_currency_and_decimal_precision() -> None:
         OPENED,
         billed_amount=Decimal("12.300"),
         billed_currency="USD",
-        paid_amount=Decimal("0"),
+        paid_amount=Decimal(0),
         paid_currency="USD",
     )
     assert record.billed_amount.as_tuple() == Decimal("12.300").as_tuple()
-    assert record.paid_amount == Decimal("0")
+    assert record.paid_amount == Decimal(0)
 
 
 def test_job_record_rejects_float_amount_and_currency_without_amount() -> None:
@@ -129,9 +128,7 @@ def _csv(*rows: str) -> bytes:
 
 def test_ingest_accepts_valid_record_and_normalizes_timestamp() -> None:
     result = ingest_csv(
-        _csv(
-            "JOB-1,completed,2026-01-01T14:00:00+02:00,,12.300,USD,12.30,USD,,"
-        ),
+        _csv("JOB-1,completed,2026-01-01T14:00:00+02:00,,12.300,USD,12.30,USD,,"),
         CONFIG,
     )
     assert len(result.records) == 1
@@ -215,6 +212,12 @@ def test_exact_duplicate_retains_first_and_reports_no_quarantine() -> None:
     result = ingest_csv(_csv(row, row), CONFIG)
     assert len(result.records) == 1
     assert result.exact_duplicates == 1
+    assert result.exact_duplicate_count == 1
+    assert result.total_processed_record_count == 2
+    assert result.accepted_record_count == 1
+    assert result.rejected_record_count == 1
+    assert result.conflicting_duplicate_count == 0
+    assert result.quarantined_record_count == 0
     assert result.quarantined == ()
 
 
@@ -228,6 +231,11 @@ def test_conflicting_records_quarantine_every_valid_record_for_id() -> None:
     )
     assert result.records == ()
     assert len(result.quarantined) == 2
+    assert result.total_processed_record_count == 2
+    assert result.accepted_record_count == 0
+    assert result.rejected_record_count == 2
+    assert result.conflicting_duplicate_count == 2
+    assert result.quarantined_record_count == 2
     assert all(
         diagnostic.error_code is IngestionErrorCode.RECORD_DUPLICATE_CONFLICT
         for diagnostic in result.quarantined
@@ -262,3 +270,75 @@ def test_unknown_columns_are_ignored() -> None:
     data = b"job_id,status,opened_at,customer_name\nJOB-1,completed,2026-01-01T12:00:00Z,Secret\n"
     result = ingest_csv(data, CONFIG)
     assert len(result.records) == 1
+
+
+def test_blank_lines_are_excluded_from_records_and_counters() -> None:
+    data = b"job_id,status,opened_at\n\nJOB-1,completed,2026-01-01T12:00:00Z\n\n"
+    result = ingest_csv(data, CONFIG)
+    assert result.total_processed_record_count == 1
+    assert result.accepted_record_count == 1
+    assert result.rejected_record_count == 0
+    assert result.quarantined_record_count == 0
+
+
+def test_malformed_row_is_rejected_quarantined_and_not_a_duplicate() -> None:
+    data = b"job_id,status,opened_at\nJOB-1,completed,2026-01-01T12:00:00Z\nJOB-1,completed\n"
+    result = ingest_csv(data, CONFIG)
+    assert result.total_processed_record_count == 2
+    assert result.accepted_record_count == 1
+    assert result.rejected_record_count == 1
+    assert result.exact_duplicate_count == 0
+    assert result.conflicting_duplicate_count == 0
+    assert result.quarantined_record_count == 1
+    assert result.quarantine_diagnostics[0].reason_code == "ROW_SHAPE_INVALID"
+
+
+def test_mixed_duplicate_counters_reconcile_without_double_counting() -> None:
+    result = ingest_csv(
+        _csv(
+            "JOB-A,completed,2026-01-01T12:00:00Z,,,",
+            "JOB-A,completed,2026-01-01T12:00:00Z,,,",
+            "JOB-B,completed,2026-01-01T12:00:00Z,,,",
+            "JOB-B,cancelled,2026-01-01T12:00:00Z,,,",
+            "JOB-C,unknown,2026-01-01T12:00:00Z,,,",
+        ),
+        CONFIG,
+    )
+    assert result.total_processed_record_count == 5
+    assert result.accepted_record_count == 1
+    assert result.rejected_record_count == 4
+    assert result.exact_duplicate_count == 1
+    assert result.conflicting_duplicate_count == 2
+    assert result.quarantined_record_count == 3
+    assert result.accepted_record_count + result.rejected_record_count == 5
+
+
+def test_dataset_row_limit_error_carries_partial_counters() -> None:
+    limited = ConfigSnapshot(1_000_000, 1, 3, 10)
+    data = _csv(
+        "JOB-1,completed,2026-01-01T12:00:00Z,,,",
+        "JOB-2,completed,2026-01-01T12:00:00Z,,,",
+    )
+    with pytest.raises(DatasetIngestionError) as exc:
+        ingest_csv(data, limited)
+    assert exc.value.code is IngestionErrorCode.DATASET_LIMIT_EXCEEDED
+    assert exc.value.partial_result is not None
+    assert exc.value.partial_result.total_processed_record_count == 1
+    assert exc.value.partial_result.accepted_record_count == 1
+    assert exc.value.partial_result.rejected_record_count == 0
+
+
+def test_dataset_failure_before_record_processing_has_no_counter_summary() -> None:
+    with pytest.raises(DatasetIngestionError) as exc:
+        ingest_csv(b"job_id,status\n", CONFIG)
+    assert exc.value.partial_result is None
+
+
+def test_late_csv_syntax_error_preserves_processed_counters() -> None:
+    data = b'job_id,status,opened_at\nJOB-1,completed,2026-01-01T12:00:00Z\n"unterminated'
+    with pytest.raises(DatasetIngestionError) as exc:
+        ingest_csv(data, CONFIG)
+    assert exc.value.code is IngestionErrorCode.DATASET_STRUCTURE_INVALID
+    assert exc.value.partial_result is not None
+    assert exc.value.partial_result.total_processed_record_count == 1
+    assert exc.value.partial_result.accepted_record_count == 1

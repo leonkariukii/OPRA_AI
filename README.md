@@ -174,8 +174,9 @@ Full rules: [docs/SECURITY_AND_DATA_GOVERNANCE.md](docs/SECURITY_AND_DATA_GOVERN
 | Streamlit shell (`src/opra/app/main.py`) | Foundation status page only |
 | Architecture-boundary tests (package importability, Streamlit isolation) | Present |
 | Core configuration (`OpraConfig`, `ConfigSnapshot`) and `ConfigurationError` | Implemented (Stage 2A); no environment loading |
-| Domain models (`records`, `periods`, `analytics`, `intelligence`) | Not implemented — blocked on unresolved decisions in [docs/tasks/OPRA-MODELS-001.md](docs/tasks/OPRA-MODELS-001.md) |
-| Ingestion, validation, processing, analytics, intelligence, recommendations, reporting, pipeline | Not implemented |
+| Domain models (`records`, `periods`, `analytics`) | Implemented; `intelligence` remains deferred pending approved methodology |
+| CSV ingestion, record validation, duplicate handling, quarantine | Implemented for the approved contract in [OPRA-INGEST-001 v1.2.0](docs/specifications/OPRA-INGEST-001.md) |
+| Processing, automotive KPI analytics, intelligence, recommendations, reporting, pipeline | Not implemented; KPI formulas and intelligence methodology remain unresolved in [DATA_AND_ANALYTICS.md](docs/DATA_AND_ANALYTICS.md) |
 | Performance benchmark (`scripts/benchmark_pipeline.py`, 50,000 rows in under 5.0 s) | Planned; script does not exist yet |
 | Production readiness | Not claimed |
 
@@ -195,7 +196,7 @@ Open design decisions (CSV schema, KPI catalogue, confidence rules, rounding mod
 | [docs/SECURITY_AND_DATA_GOVERNANCE.md](docs/SECURITY_AND_DATA_GOVERNANCE.md) | Upload controls, privacy, session isolation, secrets |
 | [docs/DEPLOYMENT_AND_OPERATIONS.md](docs/DEPLOYMENT_AND_OPERATIONS.md) | Runtime setup, environment stages, release gates |
 | [docs/tasks/OPRA-MODELS-001.md](docs/tasks/OPRA-MODELS-001.md) | Stage 2A configuration implementation and remaining model decisions |
-| [docs/specifications/OPRA-INGEST-001.md](docs/specifications/OPRA-INGEST-001.md) | Proposed data ingestion contract; awaiting owner approval before implementation |
+| [docs/specifications/OPRA-INGEST-001.md](docs/specifications/OPRA-INGEST-001.md) | Approved v1.2.0 CSV ingestion contract for Stage 3B implementation |
 
 ## 11. License
 

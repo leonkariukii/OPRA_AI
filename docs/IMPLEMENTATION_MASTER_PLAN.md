@@ -15,7 +15,7 @@ This master plan consolidates the remaining OPRA.AI MVP work into **four depende
 Existing approved governance and technical documents remain authoritative for implementation decisions. The roadmap file is a navigation index derived from this master plan; it is not recovered historical roadmap content and is not an independent source of requirements. Before implementation, the coding agent must verify actual repository paths rather than assuming any referenced document exists. If a required approved specification is missing, the agent must report a structured blocker rather than creating a replacement or guessing its contents:
 1. `AGENTS.md` (Repository rules, coding standards, workflow boundaries)
 2. `docs/IMPLEMENTATION_ROADMAP.md` (Derived navigation index only; use this master plan and approved specifications for requirements)
-3. `docs/specifications/OPRA-INGEST-001.md` v1.0.0 (CSV ingestion, validation, duplicate detection, and quarantine rules)
+3. `docs/specifications/OPRA-INGEST-001.md` v1.2.0 (CSV ingestion, validation, duplicate detection, counters, and quarantine rules)
 4. `OPRA-MODELS-001.md` (verify exact path in `docs/` or `docs/specifications/`) and existing model modules/tests (Domain models, contracts, and public exports)
 5. Approved product, technical, analytics, reporting, and security specifications in `docs/`
 

@@ -1,5 +1,6 @@
-﻿from datetime import UTC, datetime
+from datetime import UTC, datetime
 from decimal import Decimal
+
 import pytest
 
 from opra.core.config import OpraConfig
@@ -23,7 +24,9 @@ def csv(*rows: str) -> bytes:
 
 
 def test_record_is_frozen_and_normalizes_utc() -> None:
-    record = JobRecord(" id ", JobStatus.COMPLETED, datetime.fromisoformat("2026-01-01T03:00:00+03:00"))
+    record = JobRecord(
+        " id ", JobStatus.COMPLETED, datetime.fromisoformat("2026-01-01T03:00:00+03:00")
+    )
     assert record.opened_at == datetime(2026, 1, 1, tzinfo=UTC)
     assert record.job_id == " id "
     with pytest.raises((AttributeError, TypeError)):
@@ -39,16 +42,21 @@ def test_record_rejects_bad_decimal_and_unpaired_currency() -> None:
 
 
 def test_csv_exact_and_conflicting_duplicates_and_invalid_isolated() -> None:
-    result = ingest_csv(csv(
-        "a,completed,2026-01-01T00:00:00Z,,1.230,USD",
-        "a,completed,2025-12-31T19:00:00-05:00,,1.230,USD",
-        "b,completed,2026-01-01T00:00:00Z,,1,USD",
-        "b,cancelled,2026-01-01T00:00:00Z,,1,USD",
-        "bad,wrong,not-a-time,,,",
-    ), OpraConfig())
+    result = ingest_csv(
+        csv(
+            "a,completed,2026-01-01T00:00:00Z,,1.230,USD",
+            "a,completed,2025-12-31T19:00:00-05:00,,1.230,USD",
+            "b,completed,2026-01-01T00:00:00Z,,1,USD",
+            "b,cancelled,2026-01-01T00:00:00Z,,1,USD",
+            "bad,wrong,not-a-time,,,",
+        ),
+        OpraConfig(),
+    )
     assert [r.job_id for r in result.records] == ["a"]
     assert result.exact_duplicates == 1
-    assert [d.error_code for d in result.quarantined].count(IngestionErrorCode.RECORD_DUPLICATE_CONFLICT) == 2
+    assert [d.error_code for d in result.quarantined].count(
+        IngestionErrorCode.RECORD_DUPLICATE_CONFLICT
+    ) == 2
     assert result.records[0].billed_amount == Decimal("1.230")
     assert result.records[0].opened_at.tzinfo == UTC
 
@@ -59,7 +67,10 @@ def test_dataset_level_rejections() -> None:
         ingest_csv(b"\xff", config)
     assert error.value.code == IngestionErrorCode.DATASET_ENCODING_INVALID
     with pytest.raises(DatasetIngestionError) as error:
-        ingest_csv(b"job_id,status,opened_at\na,completed,2026-01-01T00:00:00Z\nb,completed,2026-01-01T00:00:00Z", config)
+        ingest_csv(
+            b"job_id,status,opened_at\na,completed,2026-01-01T00:00:00Z\nb,completed,2026-01-01T00:00:00Z",
+            config,
+        )
     assert error.value.code == IngestionErrorCode.DATASET_LIMIT_EXCEEDED
     with pytest.raises(DatasetIngestionError) as error:
         ingest_csv(b"job_id,job_id,status,opened_at\n", config)
@@ -76,6 +87,9 @@ def test_timestamp_currency_and_diagnostics_are_safe() -> None:
 
 
 def test_missing_completed_time_is_none_and_bad_offset_quarantined() -> None:
-    result = ingest_csv(csv("a,in_progress,2026-01-01T00:00:00Z,,,,", "b,completed,2026-01-01T00:00:00,,,,"), OpraConfig())
+    result = ingest_csv(
+        csv("a,in_progress,2026-01-01T00:00:00Z,,,,", "b,completed,2026-01-01T00:00:00,,,,"),
+        OpraConfig(),
+    )
     assert len(result.records) == 1 and result.records[0].completed_at is None
     assert len(result.quarantined) == 1
