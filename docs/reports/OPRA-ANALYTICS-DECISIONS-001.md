@@ -177,7 +177,7 @@ The status column below reflects the owner approval recorded in `OPRA-ANALYTICS-
 
 | Approval ID | Topic requiring owner decision | Recommended starting point | Status |
 |---|---|---|---|
-| A-01 | Intake, completion, and turnaround cohort event timestamps and populations | Separate event timestamps and status eligibility by cohort. | **APPROVED — `OPRA-PROCESSING-001` / `OPRA-ANALYTICS-001`** |
+| A-01 | Intake, completion, and turnaround cohort event timestamps, populations, and separation of membership from KPI eligibility | Processing turnaround membership follows completion eligibility and retains negative-duration records; KPI-07 excludes negative durations, counts them as a limitation, and includes equal timestamps as zero-hour observations. | **APPROVED — owner reconciliation; `OPRA-PROCESSING-001` §2 / `OPRA-ANALYTICS-001` §§2–3** |
 | A-02 | Whether KPI-06 is “Matured Intake Cohort”; ID, purpose, population, and formula | KPI-06 is the matured intake cohort count used by KPI-03/04. | **APPROVED — `OPRA-ANALYTICS-001` §3** |
 | A-03 | Scope and exact boundary/application of the three-day maturity buffer | Elapsed 24-hour days; inclusive cutoff against one explicit UTC reference. | **APPROVED — `OPRA-ANALYTICS-001` §§1–2** |
 | A-04 | Immature, cancelled, in-progress, and missing-completion treatment per KPI | Per-cohort status and limitation behavior defined by KPI contract. | **APPROVED — `OPRA-ANALYTICS-001` §§2–3** |
@@ -187,8 +187,18 @@ The status column below reflects the owner approval recorded in `OPRA-ANALYTICS-
 | A-08 | Finding IDs, triggers, thresholds, evidence, confidence, and small-sample behavior | F-001 through F-004 with evidence-sufficiency tiers, not statistical confidence. | **APPROVED — `OPRA-INTELLIGENCE-001` §§1–2** |
 | A-09 | Priority ranking and finding-to-recommendation mapping/content | Fixed rank and recommendation mappings. | **APPROVED — `OPRA-INTELLIGENCE-001` §§3–4** |
 | A-10 | Final report schema/version, Decimal and missing-value encoding, timestamp input, ordering, Markdown escaping | Generic schema 1.0.0 preserved; integrated schema 1.1.0 is additive. | **APPROVED — `OPRA-REPORT-001` v1.1.0 for its specified generic and integrated contracts** |
+| A-11 | Package 1 Stage 4A/4B boundary | Stage 4A covers processing cohort membership; Stage 4B covers analytics eligibility, maturity, KPIs, and comparisons. | **APPROVED — owner reconciliation; see `OPRA-PACKAGE1-RECONCILIATION-001`** |
 
 **Resolution record:** The grouped approval is in `OPRA-ANALYTICS-V1-APPROVAL-001`. A-10 is approved for the generic and integrated schemas defined in `OPRA-REPORT-001` v1.1.0; behavior outside those contracts remains out of scope.
+
+### Package 1 reconciliation addendum (2026-11-27)
+
+The owner approved A-01 and A-11 in `OPRA-PACKAGE1-RECONCILIATION-001`. This addendum clarifies execution boundaries without changing the approved processing, analytics, model, or report contracts:
+
+- **A-01 — cohort membership and KPI eligibility:** `ProcessingCohorts.turnaround` includes the records meeting completion status, non-null `completed_at`, and period membership, even when `completed_at < opened_at`. Processing neither calculates duration nor applies duration-based exclusion. KPI-07 independently includes only records with `completed_at >= opened_at`; equal timestamps are valid zero-hour observations. Negative-duration records are excluded from its calculation and counted using the existing `AnalysisLimitation` (`NEGATIVE_TURNAROUND_DURATION`, count, `KPI-07`). `KPIResult.limitation_codes`, `sample_size`, and `eligible_count` retain their existing meanings. No field, code, formula, or schema is added.
+- **A-11 — stage boundary:** Stage 4A is intake/completion/turnaround cohort membership under `OPRA-PROCESSING-001`, including period membership, ordering, and immutable inputs/results. It excludes maturity filtering, duration calculations, KPI calculations, and comparisons. Stage 4B is reference-time and maturity eligibility plus KPI-01–KPI-07 and approved comparisons under `OPRA-ANALYTICS-001`. The integrated limitation representation remains governed by `OPRA-REPORT-001` v1.1.0.
+
+Historical proposals and earlier blockers remain as written; this dated addendum records their later resolution and does not rewrite the Stage 3B report or prior audit findings.
 
 ## Sources reviewed
 
