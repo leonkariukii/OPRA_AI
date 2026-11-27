@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal, localcontext
+from typing import cast
 
 from opra.core.config import ConfigSnapshot
 from opra.core.exceptions import ModelValidationError
@@ -44,18 +45,20 @@ def _count(value: int) -> Decimal:
 def _rate(numerator: int, denominator: int) -> Decimal:
     with localcontext() as context:
         context.prec = 50
-        return (
-            Decimal(numerator) * Decimal(100) / Decimal(denominator)
-        ).quantize(PERCENT_QUANTUM, rounding=ROUND_HALF_UP)
+        return (Decimal(numerator) * Decimal(100) / Decimal(denominator)).quantize(
+            PERCENT_QUANTUM, rounding=ROUND_HALF_UP
+        )
 
 
 def _exact_sum(values: tuple[Decimal, ...]) -> Decimal:
     if not values:
         return Decimal(0)
-    max_adjusted = max(value.adjusted() for value in values if value != 0) if any(
-        value != 0 for value in values
-    ) else 0
-    min_exponent = min(value.as_tuple().exponent for value in values)
+    max_adjusted = (
+        max(value.adjusted() for value in values if value != 0)
+        if any(value != 0 for value in values)
+        else 0
+    )
+    min_exponent = min(cast(int, value.as_tuple().exponent) for value in values)
     required_precision = max(1, max_adjusted - min_exponent + 1) + len(str(len(values))) + 1
     with localcontext() as context:
         context.prec = max(50, required_precision)
@@ -90,8 +93,7 @@ def calculate_kpis(
         raise ModelValidationError("period.end_utc must not be later than reference_utc_timestamp.")
     cohorts = assign_cohorts(records, period)
     completed_missing_time = sum(
-        record.status is JobStatus.COMPLETED and record.completed_at is None
-        for record in records
+        record.status is JobStatus.COMPLETED and record.completed_at is None for record in records
     )
 
     intake = cohorts.intake
@@ -108,9 +110,7 @@ def calculate_kpis(
         and record.completed_at is not None
         and record.completed_at <= reference
     )
-    cancelled_matured = tuple(
-        record for record in matured if record.status is JobStatus.CANCELLED
-    )
+    cancelled_matured = tuple(record for record in matured if record.status is JobStatus.CANCELLED)
     completed = cohorts.completion
     turnaround_candidates = cohorts.turnaround
     valid_turnaround = tuple(
@@ -150,10 +150,14 @@ def calculate_kpis(
         )
     )
     matured_denominator = len(matured)
-    kpi03_codes = {"COMPLETED_TIMESTAMP_MISSING"} if any(
-        record.status is JobStatus.COMPLETED and record.completed_at is None
-        for record in matured
-    ) else set()
+    kpi03_codes = (
+        {"COMPLETED_TIMESTAMP_MISSING"}
+        if any(
+            record.status is JobStatus.COMPLETED and record.completed_at is None
+            for record in matured
+        )
+        else set()
+    )
     if immature_count:
         kpi03_codes.add("IMMATURE_INTAKE_EXCLUDED")
     if matured_denominator:
@@ -327,8 +331,9 @@ def calculate_kpis(
         )
     if negative_duration_count:
         limitations.append(
-            AnalysisLimitation(
-                "NEGATIVE_TURNAROUND_DURATION", negative_duration_count, "KPI-07"
-            )
+            AnalysisLimitation("NEGATIVE_TURNAROUND_DURATION", negative_duration_count, "KPI-07")
         )
-    return KPIComputation(tuple(result), tuple(sorted(limitations, key=lambda item: (item.code, item.metric_id or ""))))
+    return KPIComputation(
+        tuple(result),
+        tuple(sorted(limitations, key=lambda item: (item.code, item.metric_id or ""))),
+    )
