@@ -1,4 +1,5 @@
-"""Processing stage boundary (normalization, reporting periods, maturity rules).
+"""Processing operations over canonical job records."""
 
-Reserved boundary; no behavior is implemented at the scaffold stage.
-"""
+from opra.processing.cohorts import ProcessingCohorts, assign_cohorts
+
+__all__ = ["ProcessingCohorts", "assign_cohorts"]

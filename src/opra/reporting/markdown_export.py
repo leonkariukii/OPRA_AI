@@ -5,14 +5,11 @@ from opra.models.reporting import ReportDocument
 
 def _escape_cell(value: str) -> str:
     """Escape Markdown table delimiters without changing the source value."""
-    return (
-        value.replace("\\", "\\\\")
-        .replace("|", "\\|")
-        .replace("`", "\\`")
-        .replace("\r\n", "<br>")
-        .replace("\r", "<br>")
-        .replace("\n", "<br>")
-    )
+    escaped = value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    escaped = escaped.replace("\\", "\\\\")
+    for character in ("|", "`", "[", "]", "(", ")", "!"):
+        escaped = escaped.replace(character, f"\\{character}")
+    return escaped.replace("\r\n", "<br>").replace("\r", "<br>").replace("\n", "<br>")
 
 
 def report_to_markdown(report: ReportDocument) -> str:

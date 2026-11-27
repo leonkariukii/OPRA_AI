@@ -137,3 +137,14 @@ def test_markdown_is_stable_and_escapes_table_structure() -> None:
     assert "| z\\|\\`<br>second | unavailable | — |" in rendered
     assert rendered.endswith("\n")
     assert rendered.count("\n") == 10
+
+
+def test_markdown_escapes_html_and_link_syntax_in_untrusted_metric_id() -> None:
+    result = _metric(
+        "<script>|[click](https://invalid.example)\n!image",
+        MetricStatus.UNAVAILABLE,
+    )
+    rendered = report_to_markdown(_report((result,)))
+    assert "<script>" not in rendered
+    assert "[click](https://invalid.example)" not in rendered
+    assert "&lt;script&gt;\\|\\[click\\]\\(https://invalid.example\\)<br>\\!image" in rendered

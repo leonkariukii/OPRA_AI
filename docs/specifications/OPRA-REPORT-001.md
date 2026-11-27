@@ -36,7 +36,7 @@ This v1 schema reports generic metrics only. Findings, recommendations, caveats 
 
 - Output is a deterministic UTF-8 Markdown document with metadata followed by a metric table.
 - Metrics use the same stable ordering as JSON. Status is shown explicitly; an absent value is rendered as `—`, while `AVAILABLE` Decimal values use `str(value)`.
-- Escape `\\`, `|`, backticks, and line breaks in table text so values cannot alter table structure. Do not change canonical model values.
+- Escape HTML metacharacters (`&`, `<`, `>`), Markdown links/images (`[`, `]`, `(`, `)`, `!`), backslashes, pipes, backticks, and line breaks in table text so values cannot inject markup or alter table structure. Do not change canonical model values.
 - Markdown is not a spreadsheet formula format; do not prefix or rewrite metric values as a formula-injection workaround. Any future spreadsheet export must define its own output-boundary protection.
 
 ## 5. Compatibility and validation
