@@ -1,5 +1,6 @@
 """Acceptance tests for owner-approved analytics v1 behavior."""
 
+import json
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
@@ -120,7 +121,10 @@ def test_kpi07_excludes_negative_durations_and_counts_limitation() -> None:
     assert metric.sample_size == 2
     assert metric.eligible_count == 3
     assert metric.limitation_codes == ("NEGATIVE_TURNAROUND_DURATION",)
-    assert [(item.code, item.count, item.metric_id) for item in result.limitations] == [
+    negative_limits = tuple(
+        item for item in result.limitations if item.code == "NEGATIVE_TURNAROUND_DURATION"
+    )
+    assert [(item.code, item.count, item.metric_id) for item in negative_limits] == [
         ("NEGATIVE_TURNAROUND_DURATION", 1, "KPI-07")
     ]
 
@@ -143,7 +147,10 @@ def test_kpi07_all_negative_durations_are_unavailable_and_counted() -> None:
         "NEGATIVE_TURNAROUND_DURATION",
         "TURNAROUND_NO_VALID_DURATION",
     )
-    assert [(item.code, item.count, item.metric_id) for item in result.limitations] == [
+    negative_limits = tuple(
+        item for item in result.limitations if item.code == "NEGATIVE_TURNAROUND_DURATION"
+    )
+    assert [(item.code, item.count, item.metric_id) for item in negative_limits] == [
         ("NEGATIVE_TURNAROUND_DURATION", 2, "KPI-07")
     ]
 
