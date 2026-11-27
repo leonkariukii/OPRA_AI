@@ -14,10 +14,10 @@ Rules (decisions D-05, D-06 and D-11):
   rejected. The stored object is the one supplied: no quantization, rounding or conversion.
 """
 
+import re
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import Enum
-import re
 
 from opra.core.exceptions import ModelValidationError
 from opra.models.periods import ReportingPeriod
