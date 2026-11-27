@@ -11,7 +11,7 @@ from opra.core.config import OpraConfig
 from opra.core.exceptions import ModelValidationError
 from opra.models.analytics import MetricResult, MetricStatus, MetricValue
 from opra.models.periods import ReportingPeriod
-from opra.models.reporting import ReportDocument
+from opra.models.reporting import REPORT_SCHEMA_VERSION, ReportDocument
 from opra.reporting.json_export import report_to_json
 from opra.reporting.markdown_export import report_to_markdown
 
@@ -61,6 +61,31 @@ def test_report_is_frozen_and_slotted() -> None:
     with pytest.raises(FrozenInstanceError):
         report.engine_version = "next"  # type: ignore[misc]
     assert not hasattr(report, "__dict__")
+
+
+def test_report_default_schema_version_is_the_supported_version() -> None:
+    report = _report()
+    assert REPORT_SCHEMA_VERSION == "1.0.0"
+    assert report.schema_version == REPORT_SCHEMA_VERSION
+    assert json.loads(report_to_json(report))["schema_version"] == REPORT_SCHEMA_VERSION
+
+
+@pytest.mark.parametrize("schema_version", ["", " ", "0.9.0", "1.0.1", "2.0.0", "v1"])
+def test_report_rejects_empty_or_unsupported_schema_versions(schema_version: str) -> None:
+    with pytest.raises(ModelValidationError, match="schema_version"):
+        ReportDocument(GENERATED, "0.1.0", CONFIG, (), schema_version=schema_version)
+
+
+@pytest.mark.parametrize("schema_version", [None, 1, True, 1.0])
+def test_report_rejects_non_string_schema_versions(schema_version: object) -> None:
+    with pytest.raises(ModelValidationError, match="schema_version must be a non-empty string"):
+        ReportDocument(
+            GENERATED,
+            "0.1.0",
+            CONFIG,
+            (),
+            schema_version=schema_version,  # type: ignore[arg-type]
+        )
 
 
 def test_json_has_stable_schema_order_and_explicit_metadata() -> None:

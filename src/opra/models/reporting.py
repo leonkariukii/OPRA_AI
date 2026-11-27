@@ -7,6 +7,8 @@ from opra.core.config import ConfigSnapshot
 from opra.core.exceptions import ModelValidationError
 from opra.models.analytics import MetricResult
 
+REPORT_SCHEMA_VERSION = "1.0.0"
+
 
 @dataclass(frozen=True, slots=True)
 class ReportDocument:
@@ -16,7 +18,7 @@ class ReportDocument:
     engine_version: str
     config: ConfigSnapshot
     metrics: tuple[MetricResult, ...]
-    schema_version: str = "1.0.0"
+    schema_version: str = REPORT_SCHEMA_VERSION
 
     def __post_init__(self) -> None:
         if not isinstance(self.generated_at_utc, datetime):
@@ -33,6 +35,10 @@ class ReportDocument:
             raise ModelValidationError("engine_version must be a non-empty string.")
         if not isinstance(self.schema_version, str) or not self.schema_version.strip():
             raise ModelValidationError("schema_version must be a non-empty string.")
+        if self.schema_version != REPORT_SCHEMA_VERSION:
+            raise ModelValidationError(
+                f"schema_version is unsupported; supported version is {REPORT_SCHEMA_VERSION}."
+            )
         if not isinstance(self.config, ConfigSnapshot):
             raise ModelValidationError("config must be a ConfigSnapshot.")
         if not isinstance(self.metrics, tuple):

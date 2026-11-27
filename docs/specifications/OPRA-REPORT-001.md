@@ -1,7 +1,7 @@
 # OPRA.AI — Deterministic Metric Report Contract
 
 **Document ID:** `OPRA-REPORT-001`  
-**Version:** `1.0.0`  
+**Version:** `1.0.1`
 **Status:** Approved for implementation by owner direction in chat on 2026-11-27 (“implement the recommended fixes and continue with implementation”).  
 **Scope:** Deterministic JSON and Markdown serialization of existing generic metric results. This contract does not define KPI formulas, cohorts, findings, recommendations, or a final integrated report.
 
@@ -42,7 +42,8 @@ This v1 schema reports generic metrics only. Findings, recommendations, caveats 
 ## 5. Compatibility and validation
 
 - Schema-breaking changes require a major schema version. Additive compatible fields require a minor version; editorial or non-contract changes use a patch version.
-- Construction rejects naive timestamps, empty engine versions, wrong config/model types, and non-tuple metric collections.
+- This implementation supports only `1.0.0`. `ReportDocument` rejects every other schema version with `ModelValidationError`; serializers must not emit a version they do not implement.
+- Construction rejects unsupported schema versions, naive timestamps, empty engine versions, wrong config/model types, and non-tuple metric collections.
 - The report model and exporters add no analytics behavior. They preserve the generic metric tri-state and exact Decimal value.
 
 ## 6. Acceptance checks
@@ -53,4 +54,5 @@ Tests must cover UTC normalization, strict tuple/model validation, stable orderi
 
 | Version | Date | Summary |
 |---|---|---|
+| `1.0.1` | 2026-11-27 | Clarify that v1.0.0 is the only supported serializer schema and unsupported versions are rejected. |
 | `1.0.0` | 2026-11-27 | Initial generic metric-report contract based on owner-directed recommended choices; excludes unresolved KPI, intelligence, and recommendation behavior. |
