@@ -1,4 +1,5 @@
-"""Recommendations stage boundary (prioritized, evidence-linked recommendations).
+"""Fixed recommendation mappings for approved findings."""
 
-Reserved boundary; no behavior is implemented at the scaffold stage.
-"""
+from opra.recommendations.engine import recommend
+
+__all__ = ["recommend"]

@@ -1,4 +1,5 @@
-"""Intelligence stage boundary (deterministic findings with sample-size context).
+"""Deterministic threshold findings with evidence sufficiency."""
 
-Reserved boundary; no behavior is implemented at the scaffold stage.
-"""
+from opra.intelligence.engine import IntelligenceResult, evaluate_findings
+
+__all__ = ["IntelligenceResult", "evaluate_findings"]

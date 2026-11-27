@@ -31,12 +31,22 @@ class KPIResult:
             raise ModelValidationError("metric_value must be a MetricValue.")
         if not isinstance(self.period, ReportingPeriod):
             raise ModelValidationError("period must be a ReportingPeriod.")
-        for name, value in (("numerator", self.numerator), ("denominator", self.denominator)):
-            if value is not None and (not isinstance(value, Decimal) or not value.is_finite()):
-                raise ModelValidationError(f"{name} must be None or a finite Decimal.")
-        for name, value in (("sample_size", self.sample_size), ("eligible_count", self.eligible_count)):
-            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-                raise ModelValidationError(f"{name} must be a non-negative integer.")
+        for decimal_name, decimal_value in (
+            ("numerator", self.numerator),
+            ("denominator", self.denominator),
+        ):
+            if decimal_value is not None and (
+                not isinstance(decimal_value, Decimal) or not decimal_value.is_finite()
+            ):
+                raise ModelValidationError(f"{decimal_name} must be None or a finite Decimal.")
+        count_name: str
+        count_value: int
+        for count_name, count_value in (
+            ("sample_size", self.sample_size),
+            ("eligible_count", self.eligible_count),
+        ):
+            if isinstance(count_value, bool) or not isinstance(count_value, int) or count_value < 0:
+                raise ModelValidationError(f"{count_name} must be a non-negative integer.")
         if not isinstance(self.limitation_codes, tuple):
             raise ModelValidationError("limitation_codes must be a tuple.")
         if any(not isinstance(code, str) or not code for code in self.limitation_codes):

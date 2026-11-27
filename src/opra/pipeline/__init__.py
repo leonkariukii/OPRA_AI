@@ -1,4 +1,5 @@
-"""Pipeline orchestration boundary.
+"""In-memory pipeline orchestration."""
 
-Reserved boundary; stage orchestration is delivered by a separately approved task.
-"""
+from opra.pipeline.runner import run_analytics
+
+__all__ = ["run_analytics"]

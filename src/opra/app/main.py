@@ -6,6 +6,7 @@ import streamlit as st
 
 from opra.core.config import OpraConfig
 from opra.core.exceptions import OpraError
+from opra.ingestion.csv_loader import DatasetIngestionError
 from opra.models.periods import ReportingPeriod
 from opra.pipeline.runner import run_analytics
 from opra.reporting.json_export import integrated_report_to_json
@@ -30,6 +31,8 @@ def main() -> None:
     last_date = st.date_input("Last included day (UTC)", today.date() - timedelta(days=1))
     reference_date = st.date_input("Source snapshot date (UTC)", today.date())
     reference_time = st.time_input("Source snapshot time (UTC)", today.time().replace(tzinfo=None))
+    generated_date = st.date_input("Report timestamp date (UTC)", today.date())
+    generated_time = st.time_input("Report timestamp time (UTC)", today.time().replace(tzinfo=None))
     compare = st.checkbox(
         "Compare with the immediately preceding equal-duration period", value=True
     )
@@ -39,7 +42,7 @@ def main() -> None:
     start = _utc_midnight(start_date)
     end = _utc_midnight(last_date + timedelta(days=1))
     reference = datetime.combine(reference_date, reference_time, tzinfo=UTC)
-    generated = datetime.now(UTC)
+    generated = datetime.combine(generated_date, generated_time, tzinfo=UTC)
     try:
         period = ReportingPeriod(start, end)
         duration = end - start
@@ -53,6 +56,18 @@ def main() -> None:
             ENGINE_VERSION,
             baseline,
         )
+    except DatasetIngestionError as exc:
+        st.error(f"Dataset rejected ({exc.code.value}). Correct the file and try again.")
+        if exc.partial_result is not None:
+            partial = exc.partial_result
+            st.caption(
+                "Rows processed before rejection: "
+                f"{partial.total_processed_record_count}; "
+                f"accepted {partial.accepted_record_count}; "
+                f"rejected {partial.rejected_record_count}; "
+                f"quarantined {partial.quarantined_record_count}."
+            )
+        return
     except OpraError as exc:
         st.error(
             f"Processing could not be completed ({type(exc).__name__}). Check the file and selected period."
@@ -75,6 +90,33 @@ def main() -> None:
         ],
         use_container_width=True,
     )
+    st.subheader("Ingestion summary")
+    st.write(
+        f"{result.ingestion.total_processed_record_count} rows processed; "
+        f"{result.ingestion.accepted_record_count} accepted; "
+        f"{result.ingestion.rejected_record_count} rejected; "
+        f"{result.ingestion.exact_duplicate_count} exact duplicates; "
+        f"{result.ingestion.conflicting_duplicate_count} conflicting duplicates; "
+        f"{result.ingestion.quarantined_record_count} quarantined."
+    )
+    if result.baseline_period is not None:
+        st.subheader("Period comparisons")
+        st.dataframe(
+            [
+                {
+                    "KPI": item.current.kpi_id,
+                    "Unit": item.current.unit,
+                    "Absolute change": str(item.absolute_change.value)
+                    if item.absolute_change.value is not None
+                    else item.absolute_change.status.value,
+                    "Relative change": str(item.relative_change.value)
+                    if item.relative_change.value is not None
+                    else item.relative_change.status.value,
+                }
+                for item in result.comparisons
+            ],
+            use_container_width=True,
+        )
     st.subheader("Findings")
     if result.findings:
         for finding in result.findings:
@@ -86,6 +128,15 @@ def main() -> None:
                     st.write(recommendation.text)
     else:
         st.write("No findings were triggered.")
+    if result.limitations:
+        st.subheader("Data limitations")
+        st.dataframe(
+            [
+                {"Code": item.code, "Count": item.count, "KPI": item.metric_id}
+                for item in result.limitations
+            ],
+            use_container_width=True,
+        )
     st.download_button(
         "Download JSON", integrated_report_to_json(result), "opra-report.json", "application/json"
     )

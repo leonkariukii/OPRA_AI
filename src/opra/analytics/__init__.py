@@ -1,4 +1,6 @@
-"""Analytics stage boundary (deterministic KPI and period comparison logic).
+"""Deterministic KPI and period-comparison calculations."""
 
-Reserved boundary; no behavior is implemented at the scaffold stage.
-"""
+from opra.analytics.comparisons import compare_kpis
+from opra.analytics.kpi_engine import KPIComputation, calculate_kpis
+
+__all__ = ["KPIComputation", "calculate_kpis", "compare_kpis"]

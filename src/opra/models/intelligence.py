@@ -32,7 +32,11 @@ class Finding:
             raise ModelValidationError("finding_id must be a non-empty string.")
         if not isinstance(self.title, str) or not self.title:
             raise ModelValidationError("title must be a non-empty string.")
-        if isinstance(self.priority_rank, bool) or not isinstance(self.priority_rank, int) or self.priority_rank < 1:
+        if (
+            isinstance(self.priority_rank, bool)
+            or not isinstance(self.priority_rank, int)
+            or self.priority_rank < 1
+        ):
             raise ModelValidationError("priority_rank must be a positive integer.")
         if not isinstance(self.comparison, ComparisonResult):
             raise ModelValidationError("comparison must be a ComparisonResult.")
@@ -64,7 +68,11 @@ class Recommendation:
         ):
             if not isinstance(value, str) or not value.strip():
                 raise ModelValidationError(f"{name} must be a non-empty string.")
-        if isinstance(self.priority_rank, bool) or not isinstance(self.priority_rank, int) or self.priority_rank < 1:
+        if (
+            isinstance(self.priority_rank, bool)
+            or not isinstance(self.priority_rank, int)
+            or self.priority_rank < 1
+        ):
             raise ModelValidationError("priority_rank must be a positive integer.")
         if not isinstance(self.limitation_codes, tuple):
             raise ModelValidationError("limitation_codes must be a tuple.")

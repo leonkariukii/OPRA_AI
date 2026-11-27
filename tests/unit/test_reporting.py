@@ -173,3 +173,14 @@ def test_markdown_escapes_html_and_link_syntax_in_untrusted_metric_id() -> None:
     assert "<script>" not in rendered
     assert "[click](https://invalid.example)" not in rendered
     assert "&lt;script&gt;\\|\\[click\\]\\(https://invalid.example\\)<br>\\!image" in rendered
+
+
+def test_markdown_guards_formula_like_text_but_preserves_negative_decimal() -> None:
+    metric = _metric(
+        '=HYPERLINK("https://invalid.example")', MetricStatus.AVAILABLE, Decimal("-12.340")
+    )
+    rendered = report_to_markdown(_report((metric,)))
+    assert "'=HYPERLINK" in rendered
+    assert "| available | -12.340 |" in rendered
+    assert metric.metric_id.startswith("=")
+    assert metric.metric_value.value == Decimal("-12.340")
