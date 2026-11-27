@@ -1,13 +1,13 @@
 # OPRA.AI — Deterministic Metric Report Contract
 
 **Document ID:** `OPRA-REPORT-001`  
-**Version:** `1.0.1`
-**Status:** Approved for implementation by owner direction in chat on 2026-11-27 (“implement the recommended fixes and continue with implementation”).  
-**Scope:** Deterministic JSON and Markdown serialization of existing generic metric results. This contract does not define KPI formulas, cohorts, findings, recommendations, or a final integrated report.
+**Version:** `1.1.0`  
+**Status:** Approved for implementation by `OPRA-ANALYTICS-V1-APPROVAL-001`.  
+**Scope:** Deterministic generic metric and integrated analytics report serialization.
 
 ## 1. Authority and limits
 
-This contract implements the reporting options recommended in `docs/reports/OPRA-ANALYTICS-DECISIONS-001.md` §7 to the extent supported by current public models. The owner instruction approves the recommended report encoding choices, not unresolved analytics or intelligence rules. `OPRA-MODELS-001` and `OPRA-INGEST-001` remain authoritative for their respective model boundaries.
+This contract implements approved v1.0.0 generic metrics and v1.1.0 integrated reports. Analytics and intelligence definitions are in `OPRA-ANALYTICS-001` and `OPRA-INTELLIGENCE-001`. `OPRA-MODELS-001` and `OPRA-INGEST-001` remain authoritative for their respective model boundaries.
 
 ## 2. Report document
 
@@ -20,6 +20,22 @@ This contract implements the reporting options recommended in `docs/reports/OPRA
 | `metrics` | Required immutable tuple of existing `MetricResult` values; no implicit list conversion. |
 
 This v1 schema reports generic metrics only. Findings, recommendations, caveats beyond metric status, and pipeline execution metadata beyond these fields are out of scope until their contracts are approved.
+
+## 2.1 Integrated report schema `1.1.0`
+
+The additive integrated schema contains the following top-level keys, in order: `schema_version`, `generated_at_utc`, `engine_version`, `config`, `reference_utc_timestamp`, `ingestion`, `periods`, `metrics`, `comparisons`, `findings`, `recommendations`, `limitations`.
+
+- `ingestion` contains dataset status and record outcome counters only; never serialize valid records, quarantine rows, raw identifiers, or parser exceptions.
+- `periods` contains the current and optional baseline UTC half-open period bounds.
+- `metrics` contain KPI identity/name, status/value, unit, period, optional numerator/denominator, sample/eligible counts, and limitation codes.
+- `comparisons` contain KPI/unit identity, baseline/current period references, status, absolute/relative changes, and limitation codes.
+- `findings` contain finding ID, title, priority, evidence tier, KPI and period evidence, sample size, rule version, and limitation codes.
+- `recommendations` contain recommendation ID, finding link, priority, fixed approved text, and limitation codes.
+- `limitations` contain deduplicated controlled codes and counts, sorted lexically; no source values or sensitive identifiers.
+- Arrays are sorted deterministically: metrics by KPI ID/unit/period, comparisons by KPI ID/unit/current period, findings by priority/finding ID/current period/KPI ID, recommendations by priority/recommendation ID, and limitations by code.
+- Decimal values are JSON strings using `str(value)`; absent values use explicit status and JSON `null`. Timestamps are explicit UTC ISO 8601 strings ending in `Z`.
+
+Schema `1.0.0` output remains unchanged. `1.1.0` is additive and is the only integrated schema version supported. Unknown versions are rejected; an exporter must never emit an unsupported version.
 
 ## 3. JSON representation
 
@@ -42,7 +58,7 @@ This v1 schema reports generic metrics only. Findings, recommendations, caveats 
 ## 5. Compatibility and validation
 
 - Schema-breaking changes require a major schema version. Additive compatible fields require a minor version; editorial or non-contract changes use a patch version.
-- This implementation supports only `1.0.0`. `ReportDocument` rejects every other schema version with `ModelValidationError`; serializers must not emit a version they do not implement.
+- Generic `ReportDocument` supports only `1.0.0`; integrated report documents support only `1.1.0`. Each model rejects other versions with `ModelValidationError`.
 - Construction rejects unsupported schema versions, naive timestamps, empty engine versions, wrong config/model types, and non-tuple metric collections.
 - The report model and exporters add no analytics behavior. They preserve the generic metric tri-state and exact Decimal value.
 
@@ -54,5 +70,6 @@ Tests must cover UTC normalization, strict tuple/model validation, stable orderi
 
 | Version | Date | Summary |
 |---|---|---|
-| `1.0.1` | 2026-11-27 | Clarify that v1.0.0 is the only supported serializer schema and unsupported versions are rejected. |
+| `1.1.0` | 2026-11-27 | Add owner-approved integrated analytics report schema `1.1.0`; preserve generic schema `1.0.0`. |
+| `1.0.1` | 2026-11-27 | Clarify that v1.0.0 is the only supported generic serializer schema and unsupported versions are rejected. |
 | `1.0.0` | 2026-11-27 | Initial generic metric-report contract based on owner-directed recommended choices; excludes unresolved KPI, intelligence, and recommendation behavior. |

@@ -2,10 +2,12 @@
 
 **Task ID:** `OPRA-ANALYTICS-DECISIONS-001`  
 **Prepared:** 2026-11-27  
-**Status:** Owner review required; recommendations below are not approved requirements  
+**Status:** Superseded in part by `OPRA-ANALYTICS-V1-APPROVAL-001` (2026-11-27); historical proposal retained  
 **Scope:** Reconcile existing decisions and present outstanding processing, KPI, comparison, intelligence, and reporting choices.
 
 > **Approval rule:** “APPROVED” below refers only to a decision supported by the cited project record. “RECOMMENDED” is a proposed option for owner review. A recommendation does not authorize implementation or amend an authoritative specification.
+
+> **Resolution notice (2026-11-27):** The owner subsequently directed implementation of the recommended fixes with full authorization. The exact approved scope is recorded in `docs/reports/OPRA-ANALYTICS-V1-APPROVAL-001.md` and authoritative specifications `OPRA-ANALYTICS-001.md`, `OPRA-INTELLIGENCE-001.md`, and `OPRA-REPORT-001.md` v1.1.0. Unmentioned items remain open. This notice preserves the original proposal and does not reinterpret its earlier status.
 
 ## 1. Reconciled existing decisions
 
@@ -169,24 +171,24 @@ The sequence below aligns with Package boundaries in `docs/IMPLEMENTATION_MASTER
 - Verify deterministic ordering/output and safe handling of absent, invalid, or restricted data.
 - Add no formulas, source mappings, confidence calculations, or recommendation text without owner-approved definitions.
 
-## 10. Outstanding owner approvals
+## 10. Owner decision register (historical proposal with current resolution)
 
-All items below remain **OPEN — APPROVAL REQUIRED** unless an owner records an explicit decision. The options marked RECOMMENDED are not approved by inclusion in this report.
+The status column below reflects the owner approval recorded in `OPRA-ANALYTICS-V1-APPROVAL-001` and the authoritative specifications it cites. The original recommendations remain preserved as the proposal history.
 
 | Approval ID | Topic requiring owner decision | Recommended starting point | Status |
 |---|---|---|---|
-| A-01 | Intake, completion, and turnaround cohort event timestamps and populations | Define each cohort separately; proposed events in §3 for review. | **OPEN — APPROVAL REQUIRED** |
-| A-02 | Whether KPI-06 is “Matured Intake Cohort”; ID, purpose, population, and formula | Do not assign KPI-06 until explicitly approved; if selected, approve all catalogue fields. | **OPEN — APPROVAL REQUIRED** |
-| A-03 | Scope and exact boundary/application of the three-day maturity buffer | Apply only to owner-named measures, against one explicit UTC reference time, with a stated boundary. | **OPEN — APPROVAL REQUIRED** |
-| A-04 | Immature, cancelled, in-progress, and missing-completion treatment per KPI | Exclude ineligible observations from that KPI and report limitations; preserve intake eligibility where relevant. | **OPEN — APPROVAL REQUIRED** |
-| A-05 | Complete v1 KPI catalogue and definitions, including source fields, aggregation, units, and edge cases | Approve one catalogue entry at a time with owner-reviewed examples. | **OPEN — APPROVAL REQUIRED** |
-| A-06 | KPI output precision, rounding mode, zero-denominator and missing/not-applicable mappings | Preserve exact internal Decimal; approve result scale and status per KPI. | **OPEN — APPROVAL REQUIRED** |
-| A-07 | Comparison period/baseline selection, absolute and percentage changes, zero/missing baseline behavior | Explicit comparable prior period; no percentage for zero/missing baseline until formula is approved. | **OPEN — APPROVAL REQUIRED** |
-| A-08 | Finding IDs, triggers, thresholds, evidence, confidence, and small-sample behavior | Begin with deterministic rules; defer confidence scoring until method is approved. | **OPEN — APPROVAL REQUIRED** |
-| A-09 | Priority ranking and finding-to-recommendation mapping/content | Stable explicit ranks; defer operational recommendations until mapped and approved. | **OPEN — APPROVAL REQUIRED** |
-| A-10 | Final report schema/version, Decimal and missing-value encoding, timestamp input, ordering, Markdown escaping | Versioned schema, explicit timestamp input, status-preserving values, deterministic order. | **OPEN — APPROVAL REQUIRED** |
+| A-01 | Intake, completion, and turnaround cohort event timestamps and populations | Separate event timestamps and status eligibility by cohort. | **APPROVED — `OPRA-PROCESSING-001` / `OPRA-ANALYTICS-001`** |
+| A-02 | Whether KPI-06 is “Matured Intake Cohort”; ID, purpose, population, and formula | KPI-06 is the matured intake cohort count used by KPI-03/04. | **APPROVED — `OPRA-ANALYTICS-001` §3** |
+| A-03 | Scope and exact boundary/application of the three-day maturity buffer | Elapsed 24-hour days; inclusive cutoff against one explicit UTC reference. | **APPROVED — `OPRA-ANALYTICS-001` §§1–2** |
+| A-04 | Immature, cancelled, in-progress, and missing-completion treatment per KPI | Per-cohort status and limitation behavior defined by KPI contract. | **APPROVED — `OPRA-ANALYTICS-001` §§2–3** |
+| A-05 | Complete v1 KPI catalogue and definitions, including source fields, aggregation, units, and edge cases | KPI-01 through KPI-07. | **APPROVED — `OPRA-ANALYTICS-001` §3** |
+| A-06 | KPI output precision, rounding mode, zero-denominator and missing/not-applicable mappings | Exact Decimal, 50-digit intermediate precision, result rounding/status rules. | **APPROVED — `OPRA-ANALYTICS-001` §§1, 3** |
+| A-07 | Comparison period/baseline selection, absolute and percentage changes, zero/missing baseline behavior | Immediately preceding equal-duration period; specified delta and zero-baseline behavior. | **APPROVED — `OPRA-ANALYTICS-001` §4** |
+| A-08 | Finding IDs, triggers, thresholds, evidence, confidence, and small-sample behavior | F-001 through F-004 with evidence-sufficiency tiers, not statistical confidence. | **APPROVED — `OPRA-INTELLIGENCE-001` §§1–2** |
+| A-09 | Priority ranking and finding-to-recommendation mapping/content | Fixed rank and recommendation mappings. | **APPROVED — `OPRA-INTELLIGENCE-001` §§3–4** |
+| A-10 | Final report schema/version, Decimal and missing-value encoding, timestamp input, ordering, Markdown escaping | Generic schema 1.0.0 preserved; integrated schema 1.1.0 is additive. | **PARTIALLY APPROVED — `OPRA-REPORT-001` v1.1.0; scope limited to specified fields** |
 
-**Owner response:** For each approval ID, record `APPROVE`, `REVISE`, or `DEFER`, with the chosen option or required change. An approval applies only to the stated topic and does not implicitly approve dependent topics.
+**Resolution record:** The grouped approval is in `OPRA-ANALYTICS-V1-APPROVAL-001`. The integrated report scope does not include behavior outside `OPRA-REPORT-001` v1.1.0.
 
 ## Sources reviewed
 

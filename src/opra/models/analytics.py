@@ -17,6 +17,7 @@ Rules (decisions D-05, D-06 and D-11):
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import Enum
+import re
 
 from opra.core.exceptions import ModelValidationError
 from opra.models.periods import ReportingPeriod
@@ -101,3 +102,22 @@ class MetricResult:
             raise ModelValidationError(
                 f"period must be a ReportingPeriod, got {type(self.period).__name__}."
             )
+
+
+@dataclass(frozen=True, slots=True)
+class AnalysisLimitation:
+    """Privacy-safe counted limitation associated with a metric or run."""
+
+    code: str
+    count: int
+    metric_id: str | None = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.code, str) or re.fullmatch(r"[A-Z][A-Z0-9_]*", self.code) is None:
+            raise ModelValidationError("limitation code must use controlled uppercase characters.")
+        if isinstance(self.count, bool) or not isinstance(self.count, int) or self.count < 0:
+            raise ModelValidationError("limitation count must be a non-negative integer.")
+        if self.metric_id is not None and (
+            not isinstance(self.metric_id, str) or not self.metric_id.strip()
+        ):
+            raise ModelValidationError("metric_id must be None or a non-empty string.")
