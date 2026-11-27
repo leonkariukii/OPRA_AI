@@ -46,7 +46,11 @@ class ComparisonResult:
             raise ModelValidationError("absolute_change must be a MetricValue.")
         if not isinstance(self.relative_change, MetricValue):
             raise ModelValidationError("relative_change must be a MetricValue.")
-        if isinstance(self.sample_size, bool) or not isinstance(self.sample_size, int) or self.sample_size < 0:
+        if (
+            isinstance(self.sample_size, bool)
+            or not isinstance(self.sample_size, int)
+            or self.sample_size < 0
+        ):
             raise ModelValidationError("sample_size must be a non-negative integer.")
         if self.coverage_percent is not None and (
             not isinstance(self.coverage_percent, Decimal)
