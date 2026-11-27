@@ -186,9 +186,9 @@ The status column below reflects the owner approval recorded in `OPRA-ANALYTICS-
 | A-07 | Comparison period/baseline selection, absolute and percentage changes, zero/missing baseline behavior | Immediately preceding equal-duration period; specified delta and zero-baseline behavior. | **APPROVED — `OPRA-ANALYTICS-001` §4** |
 | A-08 | Finding IDs, triggers, thresholds, evidence, confidence, and small-sample behavior | F-001 through F-004 with evidence-sufficiency tiers, not statistical confidence. | **APPROVED — `OPRA-INTELLIGENCE-001` §§1–2** |
 | A-09 | Priority ranking and finding-to-recommendation mapping/content | Fixed rank and recommendation mappings. | **APPROVED — `OPRA-INTELLIGENCE-001` §§3–4** |
-| A-10 | Final report schema/version, Decimal and missing-value encoding, timestamp input, ordering, Markdown escaping | Generic schema 1.0.0 preserved; integrated schema 1.1.0 is additive. | **PARTIALLY APPROVED — `OPRA-REPORT-001` v1.1.0; scope limited to specified fields** |
+| A-10 | Final report schema/version, Decimal and missing-value encoding, timestamp input, ordering, Markdown escaping | Generic schema 1.0.0 preserved; integrated schema 1.1.0 is additive. | **APPROVED — `OPRA-REPORT-001` v1.1.0 for its specified generic and integrated contracts** |
 
-**Resolution record:** The grouped approval is in `OPRA-ANALYTICS-V1-APPROVAL-001`. The integrated report scope does not include behavior outside `OPRA-REPORT-001` v1.1.0.
+**Resolution record:** The grouped approval is in `OPRA-ANALYTICS-V1-APPROVAL-001`. A-10 is approved for the generic and integrated schemas defined in `OPRA-REPORT-001` v1.1.0; behavior outside those contracts remains out of scope.
 
 ## Sources reviewed
 
