@@ -1,6 +1,6 @@
 # OPRA.AI — Operational Performance and Recommendation Analytics
 
-**Status:** Under active development — v0.1.0 foundation scaffold. The analytics pipeline is **not implemented yet** (see [Implementation Status](#9-implementation-status)).
+**Status:** Active development — v0.1.0. The repository contains a headless CSV-to-report analytics pipeline and a Streamlit interface. Package 1 implementation is present; owner acceptance is still required before work proceeds to the next package.
 
 ## 1. Overview
 
@@ -14,7 +14,7 @@
 
 * Process uploaded UTF-8 CSV data statelessly and in memory, within configured upload and row limits.
 * Produce deterministic KPI outputs with explicit `None` / `N/A` / `0` semantics and `Decimal` precision.
-* Report findings with sample-size and confidence context, and prioritized recommendations that surface data caveats.
+* Report deterministic findings with sample-size and evidence-sufficiency context, plus fixed recommendations and data caveats.
 * Export reproducible JSON and Markdown reports carrying execution metadata.
 * Keep the Streamlit layer thin, with all analytical logic in headless, independently testable modules.
 
@@ -48,21 +48,21 @@ flowchart TD
 
 ### Module responsibilities
 
-Packages under `src/opra/` and their intended roles (from [docs/TECHNICAL_DESIGN.md](docs/TECHNICAL_DESIGN.md)). Apart from `app/main.py` and the Stage 2A configuration and exception modules in `core/`, the packages are currently placeholders.
+Packages under `src/opra/` and their current responsibilities are listed below. Business rules and acceptance criteria remain governed by the approved specifications and the [implementation roadmap](docs/IMPLEMENTATION_ROADMAP.md).
 
 | Package | Intended responsibility |
 | :--- | :--- |
-| `app/` | Thin Streamlit shell, pages, and display components. Rendering and session-scoped state only; no KPI math or validation rules. |
+| `app/` | Streamlit upload and parameter collection, pipeline invocation, result display, and downloads; no KPI calculations or CSV validation rules. |
 | `pipeline/` | Captures a `ConfigSnapshot`, runs the stages in order, and assembles the final immutable report contract. |
-| `core/` | Centralized configuration, fail-fast validation, exception hierarchy, and PII-safe logging. |
-| `models/` | Deeply immutable typed contracts for records, periods, analytics outputs, and intelligence/recommendations. |
-| `ingestion/` | UTF-8 CSV loading with upload-size and row-count checks. |
-| `validation/` | Structure/field validation and `job_id` duplicate handling, including quarantine of conflicting rows. |
-| `processing/` | Domain normalization, reporting periods, and maturity/cohort handling. |
-| `analytics/` | Deterministic `Decimal` KPI calculations and period-over-period comparisons. |
-| `intelligence/` | Deterministic findings with sample-size and confidence context. |
-| `recommendations/` | Prioritized recommendations linked to findings and data caveats. |
-| `reporting/` | Reproducible JSON and Markdown exports with execution metadata. |
+| `core/` | Validated configuration snapshots and domain exceptions. Environment loading and a dedicated logging service are not implemented. |
+| `models/` | Immutable typed contracts for records, periods, KPIs, comparisons, findings, recommendations, limitations, and reports. |
+| `ingestion/` | UTF-8 CSV structure and field validation, upload/row bounds, duplicate resolution, privacy-safe quarantine diagnostics, and record counters. |
+| `validation/` | Package boundary reserved; current CSV record validation is implemented in `ingestion/csv_loader.py`. |
+| `processing/` | Deterministic intake, completion, and turnaround cohort assignment. Maturity eligibility is applied by analytics. |
+| `analytics/` | Decimal KPI-01–KPI-07 calculations, maturity eligibility, negative-duration handling, and period comparisons. |
+| `intelligence/` | Deterministic threshold findings with sample-size and evidence-sufficiency tiers. Tiers are not statistical confidence claims. |
+| `recommendations/` | Fixed recommendations mapped to approved findings. |
+| `reporting/` | Deterministic integrated JSON and Markdown exports under the approved report contract. |
 | `storage/` | Reserved post-MVP persistence boundary; not part of the stateless MVP. |
 
 Streamlit may only be imported inside `src/opra/app/` (enforced by `tests/app/test_architecture_boundaries.py`).
@@ -110,9 +110,9 @@ Streamlit may only be imported inside `src/opra/app/` (enforced by `tests/app/te
 └── tests/
     ├── conftest.py              # Shared fixtures
     ├── app/                     # Architecture-boundary tests
-    ├── integration/             # Placeholder (no tests yet)
-    ├── sample_data/             # Placeholder (no datasets yet)
-    └── unit/                    # Core configuration tests
+    ├── integration/             # Reserved for end-to-end integration tests
+    ├── sample_data/             # Test sample-data package
+    └── unit/                    # Unit and contract tests
 ```
 
 ## 7. Setup and Usage
@@ -145,7 +145,7 @@ cp .env.example .env
 uv run streamlit run src/opra/app/main.py
 ```
 
-The app currently renders only a foundation status page.
+The Streamlit interface accepts an automotive CSV, period and snapshot inputs, then displays current KPIs, optional period comparisons, findings, recommendations, ingestion counts, and limitations. It also provides JSON and Markdown downloads. The interface delegates calculations to `src/opra/pipeline/runner.py`.
 
 ### Quality checks
 
@@ -171,16 +171,20 @@ Full rules: [docs/SECURITY_AND_DATA_GOVERNANCE.md](docs/SECURITY_AND_DATA_GOVERN
 | Area | Status |
 | :--- | :--- |
 | Repository scaffold, package layout, tooling, and CI workflow | Present |
-| Streamlit shell (`src/opra/app/main.py`) | Foundation status page only |
-| Architecture-boundary tests (package importability, Streamlit isolation) | Present |
-| Core configuration (`OpraConfig`, `ConfigSnapshot`) and `ConfigurationError` | Implemented (Stage 2A); no environment loading |
-| Domain models (`records`, `periods`, `analytics`) | Implemented; `intelligence` remains deferred pending approved methodology |
-| CSV ingestion, record validation, duplicate handling, quarantine | Implemented for the approved contract in [OPRA-INGEST-001 v1.2.0](docs/specifications/OPRA-INGEST-001.md) |
-| Processing, automotive KPI analytics, intelligence, recommendations, reporting, pipeline | Not implemented; KPI formulas and intelligence methodology remain unresolved in [DATA_AND_ANALYTICS.md](docs/DATA_AND_ANALYTICS.md) |
-| Performance benchmark (`scripts/benchmark_pipeline.py`, 50,000 rows in under 5.0 s) | Planned; script does not exist yet |
+| Core configuration and exceptions | Implemented; environment and `.env` loading are not implemented |
+| Canonical record and period models | Implemented with immutable, UTC-normalized contracts |
+| CSV ingestion and validation | Implemented for the approved [OPRA-INGEST-001 v1.2.0](docs/specifications/OPRA-INGEST-001.md) contract, including duplicate handling, quarantine, and counters |
+| Processing cohorts | Implemented for [OPRA-PROCESSING-001](docs/specifications/OPRA-PROCESSING-001.md) |
+| KPI calculations and comparisons | Implemented against [OPRA-ANALYTICS-001](docs/specifications/OPRA-ANALYTICS-001.md) |
+| Findings and recommendations | Implemented against [OPRA-INTELLIGENCE-001](docs/specifications/OPRA-INTELLIGENCE-001.md); evidence tiers describe data sufficiency, not statistical confidence |
+| Integrated JSON and Markdown reports | Implemented against [OPRA-REPORT-001 v1.1.0](docs/specifications/OPRA-REPORT-001.md) |
+| Pipeline and Streamlit interface | Headless pipeline and upload/results/download interface are present; the UI remains a presentation layer |
+| Package 1 acceptance | Stage 4A/4B reconciliation and verification are documented; formal owner acceptance is pending |
+| `tests/integration/` | No tests are currently located here; pipeline behavior is covered by unit tests |
+| Performance benchmark (`scripts/benchmark_pipeline.py`) | Planned; the script is not present |
 | Production readiness | Not claimed |
 
-Open design decisions (CSV schema, KPI catalogue, confidence rules, rounding modes) are tracked in the "Unresolved Decisions" sections of the documents below.
+The implementation sequence and remaining release work are tracked in the [implementation roadmap](docs/IMPLEMENTATION_ROADMAP.md). Open business decisions remain documented in the authoritative specifications and decision records.
 
 ## 10. Documentation
 
@@ -195,8 +199,16 @@ Open design decisions (CSV schema, KPI catalogue, confidence rules, rounding mod
 | [docs/TESTING_AND_QUALITY.md](docs/TESTING_AND_QUALITY.md) | Test strategy and mandatory quality gates |
 | [docs/SECURITY_AND_DATA_GOVERNANCE.md](docs/SECURITY_AND_DATA_GOVERNANCE.md) | Upload controls, privacy, session isolation, secrets |
 | [docs/DEPLOYMENT_AND_OPERATIONS.md](docs/DEPLOYMENT_AND_OPERATIONS.md) | Runtime setup, environment stages, release gates |
+| [docs/IMPLEMENTATION_MASTER_PLAN.md](docs/IMPLEMENTATION_MASTER_PLAN.md) | Approved implementation packages and execution controls |
+| [docs/IMPLEMENTATION_ROADMAP.md](docs/IMPLEMENTATION_ROADMAP.md) | Dependency-ordered stages and Package 1 boundaries |
 | [docs/tasks/OPRA-MODELS-001.md](docs/tasks/OPRA-MODELS-001.md) | Stage 2A configuration implementation and remaining model decisions |
 | [docs/specifications/OPRA-INGEST-001.md](docs/specifications/OPRA-INGEST-001.md) | Approved v1.2.0 CSV ingestion contract for Stage 3B implementation |
+| [docs/specifications/OPRA-PROCESSING-001.md](docs/specifications/OPRA-PROCESSING-001.md) | Approved automotive cohort assignment rules |
+| [docs/specifications/OPRA-ANALYTICS-001.md](docs/specifications/OPRA-ANALYTICS-001.md) | Approved KPI and period comparison contract |
+| [docs/specifications/OPRA-INTELLIGENCE-001.md](docs/specifications/OPRA-INTELLIGENCE-001.md) | Approved finding, evidence, and recommendation rules |
+| [docs/specifications/OPRA-REPORT-001.md](docs/specifications/OPRA-REPORT-001.md) | Generic and integrated report schemas and serialization |
+| [docs/reports/OPRA-ANALYTICS-V1-APPROVAL-001.md](docs/reports/OPRA-ANALYTICS-V1-APPROVAL-001.md) | Owner approval for the analytics v1 specifications |
+| [docs/reports/OPRA-PACKAGE1-RECONCILIATION-001.md](docs/reports/OPRA-PACKAGE1-RECONCILIATION-001.md) | Package 1 verification and owner-acceptance handover |
 
 ## 11. License
 
