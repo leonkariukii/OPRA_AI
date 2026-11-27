@@ -100,6 +100,52 @@ def test_turnaround_mean_and_zero_duration() -> None:
     result = calculate_kpis(records, PERIOD, REF, CONFIG)
     metric = next(item for item in result.metrics if item.kpi_id == "KPI-07")
     assert metric.metric_value.value == Decimal("1.00")
+    assert metric.sample_size == 2
+    assert metric.eligible_count == 2
+
+
+def test_kpi07_excludes_negative_durations_and_counts_limitation() -> None:
+    opened = datetime(2026, 1, 10, tzinfo=UTC)
+    records = (
+        _record("zero", JobStatus.COMPLETED, opened, opened),
+        _record("positive", JobStatus.COMPLETED, opened, opened + timedelta(hours=2)),
+        _record("negative", JobStatus.COMPLETED, opened, opened - timedelta(hours=1)),
+    )
+
+    result = calculate_kpis(records, PERIOD, REF, CONFIG)
+    metric = next(item for item in result.metrics if item.kpi_id == "KPI-07")
+
+    assert metric.metric_value.status is MetricStatus.AVAILABLE
+    assert metric.metric_value.value == Decimal("1.00")
+    assert metric.sample_size == 2
+    assert metric.eligible_count == 3
+    assert metric.limitation_codes == ("NEGATIVE_TURNAROUND_DURATION",)
+    assert [(item.code, item.count, item.metric_id) for item in result.limitations] == [
+        ("NEGATIVE_TURNAROUND_DURATION", 1, "KPI-07")
+    ]
+
+
+def test_kpi07_all_negative_durations_are_unavailable_and_counted() -> None:
+    opened = datetime(2026, 1, 10, tzinfo=UTC)
+    records = (
+        _record("negative-a", JobStatus.COMPLETED, opened, opened - timedelta(hours=1)),
+        _record("negative-b", JobStatus.COMPLETED, opened, opened - timedelta(minutes=1)),
+    )
+
+    result = calculate_kpis(records, PERIOD, REF, CONFIG)
+    metric = next(item for item in result.metrics if item.kpi_id == "KPI-07")
+
+    assert metric.metric_value.status is MetricStatus.UNAVAILABLE
+    assert metric.metric_value.value is None
+    assert metric.sample_size == 0
+    assert metric.eligible_count == 2
+    assert metric.limitation_codes == (
+        "NEGATIVE_TURNAROUND_DURATION",
+        "TURNAROUND_NO_VALID_DURATION",
+    )
+    assert [(item.code, item.count, item.metric_id) for item in result.limitations] == [
+        ("NEGATIVE_TURNAROUND_DURATION", 2, "KPI-07")
+    ]
 
 
 def test_comparison_zero_baseline_and_missing_baseline() -> None:
@@ -161,3 +207,37 @@ def test_csv_pipeline_produces_deterministic_privacy_safe_integrated_exports() -
     markdown = integrated_report_to_markdown(report)
     assert "## KPIs" in markdown
     assert "## Findings and recommendations" in markdown
+
+
+def test_negative_turnaround_limitation_is_serialized_in_integrated_reports() -> None:
+    payload = (
+        b"job_id,status,opened_at,completed_at,billed_amount,billed_currency\n"
+        b"negative-id,completed,2026-01-03T00:00:00Z,2026-01-02T00:00:00Z,,\n"
+        b"positive-id,completed,2026-01-03T00:00:00Z,2026-01-03T01:00:00Z,,\n"
+    )
+    report = run_analytics(
+        payload,
+        OpraConfig(maturity_buffer_days=0, min_sample_size=1),
+        PERIOD,
+        REF,
+        REF,
+        "test-engine",
+    )
+
+    data = json.loads(integrated_report_to_json(report))
+    limitation = next(
+        item for item in data["limitations"] if item["code"] == "NEGATIVE_TURNAROUND_DURATION"
+    )
+    kpi07 = next(item for item in data["metrics"] if item["kpi_id"] == "KPI-07")
+    markdown = integrated_report_to_markdown(report)
+
+    assert limitation == {
+        "code": "NEGATIVE_TURNAROUND_DURATION",
+        "count": 1,
+        "metric_id": "KPI-07",
+    }
+    assert kpi07["sample_size"] == 1
+    assert kpi07["eligible_count"] == 2
+    assert "`NEGATIVE_TURNAROUND_DURATION`: 1 (KPI-07)" in markdown
+    assert "negative-id" not in markdown
+    assert "positive-id" not in markdown

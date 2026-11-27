@@ -52,6 +52,21 @@ def test_completion_and_turnaround_require_completed_status_and_timestamp() -> N
     assert result.turnaround == result.completion
 
 
+def test_turnaround_cohort_retains_negative_durations_without_reordering() -> None:
+    opened = datetime(2026, 1, 10, tzinfo=UTC)
+    records = (
+        _record("negative", JobStatus.COMPLETED, opened, datetime(2026, 1, 9, tzinfo=UTC)),
+        _record("positive", JobStatus.COMPLETED, opened, datetime(2026, 1, 11, tzinfo=UTC)),
+        _record("zero", JobStatus.COMPLETED, opened, opened),
+    )
+
+    result = assign_cohorts(records, PERIOD)
+
+    assert result.completion == records
+    assert result.turnaround == records
+    assert isinstance(result.turnaround, tuple)
+
+
 def test_period_membership_is_start_inclusive_and_end_exclusive() -> None:
     start = PERIOD.start_utc
     end = PERIOD.end_utc
